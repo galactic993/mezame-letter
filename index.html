@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a2e">
+  <meta property="og:title" content="目醒め人への手紙 | A Letter from Your Universe">
+  <meta property="og:description" content="あなたの言葉が、誰かの風になる。宇宙に向けて手紙を書くメッセージフォーム。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600&family=Noto+Serif+JP:wght@300;400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600&family=Noto+Serif+JP:wght@300;400;500;600&display=swap">
+  <title>目醒め人への手紙 | A Letter from Your Universe</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba(212, 165, 116, 0.15);
+    }
+
+    body {
+      font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: #0a0a2e;
+      color: #e8e0d8;
+      position: relative;
+      overflow-x: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px 80px;
+      padding-bottom: max(80px, env(safe-area-inset-bottom));
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+    }
+
+    /* === 宇宙背景 === */
+    .cosmos {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 30%, rgba(40, 20, 80, 0.4) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 70%, rgba(20, 40, 80, 0.3) 0%, transparent 60%),
+        radial-gradient(ellipse 100% 80% at 50% 100%, rgba(15, 25, 60, 0.5) 0%, transparent 50%),
+        linear-gradient(180deg, #080820 0%, #0e0a30 25%, #1a0a3e 50%, #0d1b3e 75%, #0a1530 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* === 星空 — 3レイヤー === */
+    .stars-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .stars-small {
+      background-image:
+        radial-gradient(1px 1px at 120px 50px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 340px 120px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 580px 80px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 720px 180px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 920px 240px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 180px 320px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 460px 280px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 680px 360px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 880px 400px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 220px 480px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 540px 520px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 780px 560px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 980px 620px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 140px 680px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 420px 720px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 640px 780px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 860px 820px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 260px 880px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 500px 920px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 800px 980px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 1100px 60px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 1320px 140px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 1540px 100px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 280px 160px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 560px 200px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 840px 280px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 1020px 340px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 160px 520px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 400px 600px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 720px 680px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 960px 740px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 1180px 380px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 1360px 460px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 1580px 540px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 200px 220px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 480px 380px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 760px 440px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 1040px 520px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 1260px 580px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 380px 120px, rgba(255,255,255,0.5), transparent);
+      animation: twinkle-sm 4s ease-in-out infinite alternate;
+    }
+
+    .stars-medium {
+      background-image:
+        radial-gradient(1.5px 1.5px at 200px 100px, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1.5px 1.5px at 650px 130px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.5px 1.5px at 1050px 290px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1.5px 1.5px at 410px 430px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1.5px 1.5px at 830px 750px, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1.5px 1.5px at 270px 630px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.5px 1.5px at 590px 690px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1.5px 1.5px at 1150px 110px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1.5px 1.5px at 1370px 190px, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1.5px 1.5px at 950px 550px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.5px 1.5px at 130px 370px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1.5px 1.5px at 730px 490px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1.5px 1.5px at 470px 930px, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1.5px 1.5px at 1030px 810px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.5px 1.5px at 190px 870px, rgba(255,255,255,0.8), transparent);
+      animation: twinkle-md 5s ease-in-out infinite alternate;
+    }
+
+    .stars-bright {
+      background-image:
+        radial-gradient(2px 2px at 450px 170px, rgba(212,165,116,0.6), transparent),
+        radial-gradient(2px 2px at 850px 230px, rgba(200,200,255,0.7), transparent),
+        radial-gradient(2.5px 2.5px at 320px 840px, rgba(212,165,116,0.5), transparent),
+        radial-gradient(2px 2px at 690px 990px, rgba(200,200,255,0.6), transparent),
+        radial-gradient(2.5px 2.5px at 1200px 420px, rgba(212,165,116,0.7), transparent),
+        radial-gradient(2px 2px at 100px 200px, rgba(200,200,255,0.5), transparent),
+        radial-gradient(2.5px 2.5px at 560px 460px, rgba(255,220,180,0.6), transparent),
+        radial-gradient(2px 2px at 1400px 680px, rgba(200,200,255,0.7), transparent);
+      animation: twinkle-bright 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes twinkle-sm {
+      0% { opacity: 0.3; }
+      100% { opacity: 0.8; }
+    }
+
+    @keyframes twinkle-md {
+      0% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes twinkle-bright {
+      0% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    /* === 流れ星 === */
+    .shooting-star {
+      position: fixed;
+      width: 3px;
+      height: 3px;
+      background: #fff;
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .shooting-star::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: 100%;
+      width: 120px;
+      height: 1.5px;
+      transform: translateY(-50%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), rgba(255,255,255,0.9));
+      border-radius: 0 1px 1px 0;
+    }
+
+    .shooting-star:nth-child(1) {
+      top: 12%;
+      left: 75%;
+      animation: shoot-a 4s ease-in 3s infinite;
+    }
+    .shooting-star:nth-child(2) {
+      top: 35%;
+      left: 85%;
+      animation: shoot-b 4s ease-in 7s infinite;
+    }
+    .shooting-star:nth-child(3) {
+      top: 8%;
+      left: 55%;
+      animation: shoot-c 4s ease-in 12s infinite;
+    }
+    .shooting-star:nth-child(4) {
+      top: 50%;
+      left: 90%;
+      animation: shoot-d 4s ease-in 18s infinite;
+    }
+
+    @keyframes shoot-a {
+      0% { opacity: 0; transform: translate(0, 0) rotate(-35deg); }
+      5% { opacity: 1; }
+      30% { opacity: 0; transform: translate(-400px, 280px) rotate(-35deg); }
+      100% { opacity: 0; transform: translate(-400px, 280px) rotate(-35deg); }
+    }
+    @keyframes shoot-b {
+      0% { opacity: 0; transform: translate(0, 0) rotate(-40deg); }
+      5% { opacity: 1; }
+      30% { opacity: 0; transform: translate(-500px, 350px) rotate(-40deg); }
+      100% { opacity: 0; transform: translate(-500px, 350px) rotate(-40deg); }
+    }
+    @keyframes shoot-c {
+      0% { opacity: 0; transform: translate(0, 0) rotate(-30deg); }
+      5% { opacity: 1; }
+      30% { opacity: 0; transform: translate(-350px, 200px) rotate(-30deg); }
+      100% { opacity: 0; transform: translate(-350px, 200px) rotate(-30deg); }
+    }
+    @keyframes shoot-d {
+      0% { opacity: 0; transform: translate(0, 0) rotate(-45deg); }
+      5% { opacity: 1; }
+      30% { opacity: 0; transform: translate(-450px, 450px) rotate(-45deg); }
+      100% { opacity: 0; transform: translate(-450px, 450px) rotate(-45deg); }
+    }
+
+    /* === 富士山シルエット（SVG） === */
+    .fuji-wrap {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 30vh;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .fuji-wrap svg {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120%;
+      min-width: 800px;
+      height: 100%;
+    }
+
+    /* === 光のパーティクル（浮遊する光） === */
+    .particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: rgba(212, 165, 116, 0.3);
+      box-shadow: 0 0 6px rgba(212, 165, 116, 0.2);
+    }
+
+    .particle:nth-child(1) { left: 10%; bottom: 20%; animation: float-up 8s ease-in-out 0s infinite; }
+    .particle:nth-child(2) { left: 25%; bottom: 15%; animation: float-up 10s ease-in-out 2s infinite; width: 3px; height: 3px; }
+    .particle:nth-child(3) { left: 45%; bottom: 25%; animation: float-up 9s ease-in-out 4s infinite; }
+    .particle:nth-child(4) { left: 65%; bottom: 18%; animation: float-up 11s ease-in-out 1s infinite; width: 3px; height: 3px; }
+    .particle:nth-child(5) { left: 80%; bottom: 22%; animation: float-up 8s ease-in-out 3s infinite; }
+    .particle:nth-child(6) { left: 35%; bottom: 10%; animation: float-up 12s ease-in-out 5s infinite; width: 2px; height: 2px; }
+    .particle:nth-child(7) { left: 55%; bottom: 30%; animation: float-up 9s ease-in-out 7s infinite; width: 5px; height: 5px; background: rgba(200, 200, 255, 0.2); }
+    .particle:nth-child(8) { left: 90%; bottom: 12%; animation: float-up 10s ease-in-out 6s infinite; width: 3px; height: 3px; }
+
+    @keyframes float-up {
+      0% { opacity: 0; transform: translateY(0); }
+      15% { opacity: 0.6; }
+      85% { opacity: 0.3; }
+      100% { opacity: 0; transform: translateY(-50vh); }
+    }
+
+    /* === メインコンテナ === */
+    .container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /* === フォームカード === */
+    .form-card {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      padding: 52px 48px;
+      box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.4),
+        0 0 80px rgba(212, 165, 116, 0.03),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+
+    .form-card.hidden {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.98);
+      pointer-events: none;
+      position: absolute;
+    }
+
+    /* === ヘッダー === */
+    .header {
+      text-align: center;
+      margin-bottom: 44px;
+    }
+
+    .header-icon {
+      display: block;
+      margin: 0 auto 20px;
+      width: 32px;
+      height: 32px;
+      opacity: 0.7;
+    }
+
+    .title {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 28px;
+      font-weight: 400;
+      color: #d4a574;
+      letter-spacing: 0.2em;
+      margin-bottom: 14px;
+      text-wrap: balance;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      font-weight: 300;
+      color: #8a7e72;
+      letter-spacing: 0.12em;
+    }
+
+    .divider {
+      width: 40px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(212, 165, 116, 0.4), transparent);
+      margin: 24px auto 0;
+    }
+
+    /* === フォーム === */
+    .form-group {
+      margin-bottom: 28px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(212, 165, 116, 0.8);
+      margin-bottom: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .form-label .required {
+      color: rgba(212, 165, 116, 0.4);
+      font-size: 10px;
+      margin-left: 4px;
+    }
+
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px 20px;
+      font-size: 15px;
+      font-weight: 300;
+      color: #e8e0d8;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+      line-height: 1.6;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    }
+
+    .form-input::placeholder,
+    .form-textarea::placeholder {
+      color: rgba(168, 155, 140, 0.35);
+      font-weight: 300;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: rgba(212, 165, 116, 0.35);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.08);
+    }
+
+    .form-input:focus-visible,
+    .form-textarea:focus-visible {
+      outline: 2px solid rgba(212, 165, 116, 0.4);
+      outline-offset: 2px;
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 140px;
+    }
+
+    /* エラー */
+    .field-error {
+      display: block;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    }
+
+    .field-error.visible {
+      max-height: 40px;
+      opacity: 1;
+      margin-top: 8px;
+    }
+
+    .field-error span {
+      display: block;
+      color: #e88a7b;
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      font-weight: 400;
+    }
+
+    .form-group.has-error .form-input,
+    .form-group.has-error .form-textarea {
+      border-color: rgba(232, 138, 123, 0.4);
+    }
+
+    /* === 送信ボタン === */
+    .submit-btn {
+      position: relative;
+      width: 100%;
+      margin-top: 8px;
+      padding: 18px 40px;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: #0e0820;
+      background: linear-gradient(135deg, #dbb58a 0%, #c9a070 40%, #b88e5c 100%);
+      box-shadow:
+        0 4px 20px rgba(212, 165, 116, 0.25),
+        0 1px 3px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      overflow: hidden;
+      transition: transform 0.25s ease, box-shadow 0.35s ease;
+    }
+
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+      border-radius: inherit;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .submit-btn:hover:not(:disabled)::before {
+      opacity: 1;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow:
+        0 8px 32px rgba(212, 165, 116, 0.35),
+        0 2px 6px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .submit-btn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow:
+        0 2px 12px rgba(212, 165, 116, 0.2),
+        0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .submit-btn:focus-visible {
+      outline: 2px solid rgba(212, 165, 116, 0.8);
+      outline-offset: 3px;
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(14, 8, 32, 0.2);
+      border-top-color: #0e0820;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .submit-btn.is-loading .btn-spinner {
+      display: block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* === 完了メッセージ === */
+    .success-card {
+      text-align: center;
+      padding: 52px 48px;
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      opacity: 0;
+      transform: translateY(20px) scale(0.98);
+      transition: opacity 1s ease, transform 1s ease;
+      display: none;
+    }
+
+    .success-card.visible {
+      display: block;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .success-star {
+      display: block;
+      margin: 0 auto 28px;
+      width: 48px;
+      height: 48px;
+      opacity: 0.8;
+    }
+
+    .success-title {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 22px;
+      font-weight: 400;
+      color: #d4a574;
+      margin-bottom: 16px;
+      letter-spacing: 0.1em;
+      line-height: 1.6;
+      text-wrap: balance;
+    }
+
+    .success-text {
+      font-size: 14px;
+      font-weight: 300;
+      color: #8a7e72;
+      line-height: 2;
+      letter-spacing: 0.05em;
+    }
+
+    .success-divider {
+      width: 40px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(212, 165, 116, 0.3), transparent);
+      margin: 28px auto;
+    }
+
+    /* === レスポンシブ === */
+    @media (max-width: 640px) {
+      body {
+        padding: 32px 16px 60px;
+      }
+
+      .form-card,
+      .success-card {
+        padding: 36px 24px;
+        border-radius: 24px;
+      }
+
+      .title {
+        font-size: 24px;
+        letter-spacing: 0.15em;
+      }
+
+      .subtitle {
+        font-size: 12px;
+      }
+
+      .form-group {
+        margin-bottom: 22px;
+      }
+
+      .form-input,
+      .form-textarea {
+        padding: 14px 16px;
+        font-size: 16px; /* iOS ズーム防止 */
+      }
+
+      .submit-btn {
+        padding: 16px 32px;
+        font-size: 14px;
+      }
+    }
+
+    /* === アニメーション無効化 === */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .shooting-star,
+      .particles {
+        display: none;
+      }
+    }
+
+    /* === スクリーンリーダー用 === */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- 宇宙背景 -->
+  <div class="cosmos" aria-hidden="true"></div>
+
+  <!-- 星空レイヤー -->
+  <div class="stars-layer stars-small" aria-hidden="true"></div>
+  <div class="stars-layer stars-medium" aria-hidden="true"></div>
+  <div class="stars-layer stars-bright" aria-hidden="true"></div>
+
+  <!-- 流れ星 -->
+  <div class="shooting-star" aria-hidden="true"></div>
+  <div class="shooting-star" aria-hidden="true"></div>
+  <div class="shooting-star" aria-hidden="true"></div>
+  <div class="shooting-star" aria-hidden="true"></div>
+
+  <!-- 浮遊パーティクル -->
+  <div class="particles" aria-hidden="true">
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+
+  <!-- 富士山シルエット -->
+  <div class="fuji-wrap" aria-hidden="true">
+    <svg viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice" fill="none">
+      <defs>
+        <linearGradient id="fuji-grad" x1="600" y1="40" x2="600" y2="300" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1a1848"/>
+          <stop offset="100%" stop-color="#0e0e30"/>
+        </linearGradient>
+        <linearGradient id="fuji-snow" x1="600" y1="40" x2="600" y2="120" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.06)"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </linearGradient>
+      </defs>
+      <!-- 山裾の稜線 -->
+      <path d="M0 300 L0 220 Q150 200 250 180 Q350 155 420 130 Q480 110 530 80 Q570 55 600 40 Q630 55 670 80 Q720 110 780 130 Q850 155 950 180 Q1050 200 1200 220 L1200 300Z" fill="url(#fuji-grad)"/>
+      <!-- 雪（わずかなハイライト） -->
+      <path d="M530 80 Q560 60 600 40 Q640 60 670 80 Q650 90 630 85 Q610 95 590 85 Q570 90 550 85Z" fill="url(#fuji-snow)"/>
+      <!-- 手前の低い山並み -->
+      <path d="M0 300 L0 250 Q100 235 200 245 Q300 230 450 240 Q550 225 650 235 Q750 225 850 240 Q1000 230 1100 245 Q1150 240 1200 250 L1200 300Z" fill="#0b0b28" opacity="0.8"/>
+    </svg>
+  </div>
+
+  <!-- メインコンテナ -->
+  <main class="container">
+    <!-- フォームカード -->
+    <div class="form-card" id="formCard">
+      <header class="header">
+        <!-- 星アイコン -->
+        <svg class="header-icon" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <circle cx="16" cy="16" r="1.5" fill="#d4a574"/>
+          <line x1="16" y1="2" x2="16" y2="30" stroke="#d4a574" stroke-width="0.5" opacity="0.5"/>
+          <line x1="2" y1="16" x2="30" y2="16" stroke="#d4a574" stroke-width="0.5" opacity="0.5"/>
+          <line x1="5.4" y1="5.4" x2="26.6" y2="26.6" stroke="#d4a574" stroke-width="0.4" opacity="0.3"/>
+          <line x1="26.6" y1="5.4" x2="5.4" y2="26.6" stroke="#d4a574" stroke-width="0.4" opacity="0.3"/>
+          <circle cx="16" cy="16" r="6" stroke="#d4a574" stroke-width="0.3" opacity="0.2"/>
+        </svg>
+        <h1 class="title">目醒め人への手紙</h1>
+        <p class="subtitle">あなたの言葉が、誰かの風になる</p>
+        <div class="divider" aria-hidden="true"></div>
+      </header>
+
+      <form id="messageForm" novalidate>
+        <!-- お名前 -->
+        <div class="form-group" id="nameGroup">
+          <label for="name" class="form-label">
+            お名前（ニックネーム可）<span class="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            class="form-input"
+            placeholder="あなたのお名前…"
+            autocomplete="name"
+            required
+            aria-describedby="nameError"
+            aria-required="true"
+          >
+          <div class="field-error" id="nameError" role="alert" aria-atomic="true">
+            <span></span>
+          </div>
+        </div>
+
+        <!-- メールアドレス -->
+        <div class="form-group" id="emailGroup">
+          <label for="email" class="form-label">
+            メールアドレス<span class="required">*</span>
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="form-input"
+            placeholder="example@mail.com"
+            autocomplete="email"
+            spellcheck="false"
+            required
+            aria-describedby="emailError"
+            aria-required="true"
+          >
+          <div class="field-error" id="emailError" role="alert" aria-atomic="true">
+            <span></span>
+          </div>
+        </div>
+
+        <!-- メッセージ -->
+        <div class="form-group" id="messageGroup">
+          <label for="message" class="form-label">
+            宇宙に届けたい言葉<span class="required">*</span>
+          </label>
+          <textarea
+            id="message"
+            name="message"
+            class="form-textarea"
+            rows="6"
+            placeholder="いま届けたい想いを、ここに…"
+            required
+            aria-describedby="messageError"
+            aria-required="true"
+          ></textarea>
+          <div class="field-error" id="messageError" role="alert" aria-atomic="true">
+            <span></span>
+          </div>
+        </div>
+
+        <!-- 送信ボタン -->
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span class="btn-inner">
+            <span class="btn-spinner" aria-hidden="true"></span>
+            <span id="btnLabel">手紙を届ける&ensp;✦</span>
+          </span>
+        </button>
+
+        <!-- スクリーンリーダー用ステータス -->
+        <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" id="formStatus"></div>
+      </form>
+    </div>
+
+    <!-- 送信完了 -->
+    <div class="success-card" id="successCard" role="status" aria-live="polite">
+      <svg class="success-star" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <circle cx="24" cy="24" r="2" fill="#d4a574"/>
+        <line x1="24" y1="4" x2="24" y2="44" stroke="#d4a574" stroke-width="0.6" opacity="0.5"/>
+        <line x1="4" y1="24" x2="44" y2="24" stroke="#d4a574" stroke-width="0.6" opacity="0.5"/>
+        <line x1="9.9" y1="9.9" x2="38.1" y2="38.1" stroke="#d4a574" stroke-width="0.4" opacity="0.3"/>
+        <line x1="38.1" y1="9.9" x2="9.9" y2="38.1" stroke="#d4a574" stroke-width="0.4" opacity="0.3"/>
+        <circle cx="24" cy="24" r="10" stroke="#d4a574" stroke-width="0.4" opacity="0.2"/>
+        <circle cx="24" cy="24" r="18" stroke="#d4a574" stroke-width="0.3" opacity="0.1"/>
+      </svg>
+      <h2 class="success-title">あなたの手紙は、<br>宇宙に届きました</h2>
+      <div class="success-divider" aria-hidden="true"></div>
+      <p class="success-text">
+        ありがとうございます。<br>
+        あなたの言葉は、きっと誰かの風になります。
+      </p>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var form = document.getElementById('messageForm');
+      var formCard = document.getElementById('formCard');
+      var successCard = document.getElementById('successCard');
+      var submitBtn = document.getElementById('submitBtn');
+      var btnLabel = document.getElementById('btnLabel');
+      var formStatus = document.getElementById('formStatus');
+
+      var fields = {
+        name: {
+          el: document.getElementById('name'),
+          group: document.getElementById('nameGroup'),
+          errorEl: document.getElementById('nameError'),
+          validate: function (v) {
+            if (!v.trim()) return 'お名前を入力してください';
+            return '';
+          }
+        },
+        email: {
+          el: document.getElementById('email'),
+          group: document.getElementById('emailGroup'),
+          errorEl: document.getElementById('emailError'),
+          validate: function (v) {
+            if (!v.trim()) return 'メールアドレスを入力してください';
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return '正しいメールアドレスを入力してください';
+            return '';
+          }
+        },
+        message: {
+          el: document.getElementById('message'),
+          group: document.getElementById('messageGroup'),
+          errorEl: document.getElementById('messageError'),
+          validate: function (v) {
+            if (!v.trim()) return 'メッセージを入力してください';
+            return '';
+          }
+        }
+      };
+
+      function showError(name, msg) {
+        var f = fields[name];
+        f.group.classList.add('has-error');
+        f.errorEl.querySelector('span').textContent = msg;
+        f.errorEl.classList.add('visible');
+      }
+
+      function clearError(name) {
+        var f = fields[name];
+        f.group.classList.remove('has-error');
+        f.errorEl.querySelector('span').textContent = '';
+        f.errorEl.classList.remove('visible');
+      }
+
+      function validateField(name) {
+        var f = fields[name];
+        var msg = f.validate(f.el.value);
+        if (msg) { showError(name, msg); return false; }
+        clearError(name);
+        return true;
+      }
+
+      function validateAll() {
+        var valid = true;
+        var firstBad = null;
+        var names = ['name', 'email', 'message'];
+        for (var i = 0; i < names.length; i++) {
+          if (!validateField(names[i]) && !firstBad) {
+            firstBad = fields[names[i]].el;
+            valid = false;
+          } else if (!validateField(names[i])) {
+            valid = false;
+          }
+        }
+        if (firstBad) firstBad.focus();
+        return valid;
+      }
+
+      // blurバリデーション
+      var fieldNames = ['name', 'email', 'message'];
+      for (var i = 0; i < fieldNames.length; i++) {
+        (function (n) {
+          fields[n].el.addEventListener('blur', function () {
+            if (this.value) validateField(n);
+          });
+          // 入力中にエラーをクリア
+          fields[n].el.addEventListener('input', function () {
+            if (fields[n].group.classList.contains('has-error')) {
+              validateField(n);
+            }
+          });
+        })(fieldNames[i]);
+      }
+
+      // 仮送信処理
+      async function sendData(data) {
+        /*
+        // === 実際のAPI接続用 ===
+        var res = await fetch('https://your-api-endpoint.com/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('送信に失敗しました');
+        return res.json();
+        */
+        console.log('送信データ:', data);
+        await new Promise(function (r) { setTimeout(r, 2000); });
+        return { success: true };
+      }
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (!validateAll()) {
+          formStatus.textContent = '入力内容にエラーがあります';
+          return;
+        }
+
+        // 送信中
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-disabled', 'true');
+        submitBtn.classList.add('is-loading');
+        btnLabel.textContent = '届けています\u2026';
+        formStatus.textContent = 'メッセージを送信しています\u2026';
+
+        try {
+          await sendData({
+            name: fields.name.el.value.trim(),
+            email: fields.email.el.value.trim(),
+            message: fields.message.el.value.trim()
+          });
+
+          formStatus.textContent = 'メッセージが送信されました';
+          formCard.classList.add('hidden');
+
+          setTimeout(function () {
+            successCard.classList.add('visible');
+          }, 600);
+
+        } catch (_) {
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute('aria-disabled');
+          submitBtn.classList.remove('is-loading');
+          btnLabel.textContent = '手紙を届ける\u2002\u2726';
+          formStatus.textContent = '送信に失敗しました。もう一度お試しください。';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
