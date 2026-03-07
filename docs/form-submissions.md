@@ -110,3 +110,16 @@ limit 200;
 - 備考:
   - `supabase db push` はDBパスワード必須のため、今回は Management API (`/v1/projects/{ref}/database/query`) でDDLを適用
   - `agent-browser` で正常送信・入力バリデーション失敗・オフライン再送を確認し、`public.form_submissions` への保存をSQL照会で検証済み
+
+## 9. 保存先プロジェクト切替ログ（2026-03-07）
+- 新規作成プロジェクト: `gzwyocsolpqcnpqnlmmx`（`mezame-letter-forms-v2`）
+- 旧プロジェクト: `vcqdcvtmjbqpzqirlyjr`（`Genkoujar`）
+- 実行済み:
+  - `supabase projects create mezame-letter-forms-v2 --org-id pzffudftwdztcaqeazgq --region ap-northeast-1`
+  - `supabase link --project-ref gzwyocsolpqcnpqnlmmx`
+  - `supabase db push --include-all` で `form_submissions` を新規作成
+  - `vercel env add --force` で `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を新プロジェクト値に更新（production/preview/development）
+  - `vercel --prod --yes` で本番再デプロイ
+- 検証結果:
+  - `POST https://mezame-letter.vercel.app/api/messages` のテスト送信が新プロジェクト `public.form_submissions` に保存されることを確認
+  - 同一テストデータが旧プロジェクトに保存されていないことを確認
