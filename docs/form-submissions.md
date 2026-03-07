@@ -14,7 +14,13 @@
   - 4xx/5xx のレスポンス整理
 
 ## 3. Supabase テーブル作成
-Supabase SQL Editor で以下を実行:
+リポジトリには migration を同梱している。まずは `supabase/migrations/20260307033114_create_form_submissions_table.sql` を適用する。
+
+```bash
+supabase db push
+```
+
+CLI が利用できない場合は、Supabase SQL Editor で以下を実行:
 
 ```sql
 create table if not exists public.form_submissions (
