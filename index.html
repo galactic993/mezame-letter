@@ -500,6 +500,24 @@
       transform: none;
     }
 
+    .submit-feedback {
+      min-height: 24px;
+      margin-top: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      letter-spacing: 0.04em;
+      color: #8a7e72;
+      transition: color 0.2s ease;
+    }
+
+    .submit-feedback.is-error {
+      color: #e88a7b;
+    }
+
+    .submit-feedback.is-info {
+      color: #d4a574;
+    }
+
     .btn-inner {
       display: flex;
       align-items: center;
@@ -764,7 +782,7 @@
         <!-- メッセージ -->
         <div class="form-group" id="messageGroup">
           <label for="message" class="form-label">
-            宇宙に届けたい言葉<span class="required">*</span>
+            目醒め人へのメッセージ<span class="required">*</span>
           </label>
           <textarea
             id="message"
@@ -788,6 +806,8 @@
             <span id="btnLabel">手紙を届ける&ensp;✦</span>
           </span>
         </button>
+
+        <p class="submit-feedback" id="submitFeedback" role="status" aria-live="polite" aria-atomic="true"></p>
 
         <!-- スクリーンリーダー用ステータス -->
         <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" id="formStatus"></div>
@@ -818,12 +838,22 @@
     (function () {
       'use strict';
 
+      var API_ENDPOINT = '/api/messages';
+      var MAX_SEND_RETRY_ATTEMPTS = 3;
+      var INITIAL_RETRY_DELAY_MS = 700;
+      var QUEUE_RETRY_ATTEMPTS = 2;
+      var PENDING_QUEUE_KEY = 'mezame_pending_submissions_v1';
+      var MAX_PENDING_ITEMS = 20;
+      var MAX_QUEUE_RETRY_COUNT = 10;
+
       var form = document.getElementById('messageForm');
       var formCard = document.getElementById('formCard');
       var successCard = document.getElementById('successCard');
       var submitBtn = document.getElementById('submitBtn');
       var btnLabel = document.getElementById('btnLabel');
+      var submitFeedback = document.getElementById('submitFeedback');
       var formStatus = document.getElementById('formStatus');
+      var isQueueFlushInProgress = false;
 
       var fields = {
         name: {
@@ -894,6 +924,89 @@
         return valid;
       }
 
+      function setFormStatus(message) {
+        formStatus.textContent = message;
+        submitFeedback.textContent = message;
+      }
+
+      function setFeedbackTone(tone) {
+        submitFeedback.classList.remove('is-error', 'is-info');
+        if (tone === 'error') submitFeedback.classList.add('is-error');
+        if (tone === 'info') submitFeedback.classList.add('is-info');
+      }
+
+      function setButtonLoading(isLoading) {
+        submitBtn.disabled = isLoading;
+        if (isLoading) {
+          submitBtn.setAttribute('aria-disabled', 'true');
+          submitBtn.classList.add('is-loading');
+          btnLabel.textContent = '届けています\u2026';
+          return;
+        }
+        submitBtn.removeAttribute('aria-disabled');
+        submitBtn.classList.remove('is-loading');
+        btnLabel.textContent = '手紙を届ける\u2002\u2726';
+      }
+
+      function wait(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+      }
+
+      function buildSendError(message, options) {
+        var err = new Error(message);
+        err.status = options && options.status ? options.status : 0;
+        err.retriable = Boolean(options && options.retriable);
+        return err;
+      }
+
+      function isRetriableStatus(status) {
+        return status === 429 || status >= 500;
+      }
+
+      function parseQueue(raw) {
+        try {
+          var parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) return [];
+          return parsed.filter(function (item) {
+            return item && typeof item === 'object' && item.payload;
+          });
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function getPendingQueue() {
+        try {
+          return parseQueue(localStorage.getItem(PENDING_QUEUE_KEY));
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function setPendingQueue(queue) {
+        try {
+          localStorage.setItem(PENDING_QUEUE_KEY, JSON.stringify(queue));
+          return true;
+        } catch (_) {
+          // localStorageが利用できない環境では再送キューを無効化する
+          return false;
+        }
+      }
+
+      function queueFailedSubmission(payload, err) {
+        var queue = getPendingQueue();
+        if (queue.length >= MAX_PENDING_ITEMS) {
+          queue.shift();
+        }
+        queue.push({
+          payload: payload,
+          queuedAt: new Date().toISOString(),
+          retryCount: 0,
+          lastError: err && err.message ? err.message : ''
+        });
+        return setPendingQueue(queue);
+      }
+
       // blurバリデーション
       var fieldNames = ['name', 'email', 'message'];
       for (var i = 0; i < fieldNames.length; i++) {
@@ -910,59 +1023,151 @@
         })(fieldNames[i]);
       }
 
-      // 仮送信処理
       async function sendData(data) {
-        /*
-        // === 実際のAPI接続用 ===
-        var res = await fetch('https://your-api-endpoint.com/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error('送信に失敗しました');
-        return res.json();
-        */
-        console.log('送信データ:', data);
-        await new Promise(function (r) { setTimeout(r, 2000); });
-        return { success: true };
+        var response;
+        try {
+          response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } catch (_) {
+          throw buildSendError('ネットワーク接続に失敗しました。', { retriable: true });
+        }
+
+        var body = null;
+        try {
+          body = await response.json();
+        } catch (_) {
+          body = null;
+        }
+
+        if (!response.ok) {
+          throw buildSendError(
+            body && body.message ? body.message : '送信に失敗しました。',
+            { status: response.status, retriable: isRetriableStatus(response.status) }
+          );
+        }
+
+        return body || { ok: true };
+      }
+
+      async function sendDataWithRetry(data, maxAttempts, initialDelayMs) {
+        var attempts = maxAttempts || MAX_SEND_RETRY_ATTEMPTS;
+        var delayMs = initialDelayMs || INITIAL_RETRY_DELAY_MS;
+        var lastError = null;
+
+        for (var attempt = 1; attempt <= attempts; attempt++) {
+          try {
+            return await sendData(data);
+          } catch (err) {
+            lastError = err;
+            if (!err.retriable || attempt === attempts) {
+              break;
+            }
+
+            var backoffDelay = delayMs * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+            await wait(backoffDelay);
+          }
+        }
+
+        throw lastError || buildSendError('送信に失敗しました。', { retriable: false });
+      }
+
+      async function flushPendingQueue() {
+        if (isQueueFlushInProgress || !navigator.onLine) {
+          return;
+        }
+
+        var queue = getPendingQueue();
+        if (!queue.length) {
+          return;
+        }
+
+        isQueueFlushInProgress = true;
+        var remaining = [];
+
+        for (var i = 0; i < queue.length; i++) {
+          var item = queue[i];
+          item.retryCount = (item.retryCount || 0) + 1;
+          try {
+            await sendDataWithRetry(item.payload, QUEUE_RETRY_ATTEMPTS, 500);
+          } catch (err) {
+            if (err.retriable && item.retryCount < MAX_QUEUE_RETRY_COUNT) {
+              item.lastError = err.message;
+              remaining.push(item);
+            }
+          }
+        }
+
+        setPendingQueue(remaining);
+        isQueueFlushInProgress = false;
+
+        if (!remaining.length) {
+          setFeedbackTone('info');
+          setFormStatus('一時保存していたメッセージの再送が完了しました。');
+        }
       }
 
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
+        setFeedbackTone('');
+        submitFeedback.textContent = '';
+
         if (!validateAll()) {
-          formStatus.textContent = '入力内容にエラーがあります';
+          setFeedbackTone('error');
+          setFormStatus('入力内容にエラーがあります。');
           return;
         }
 
         // 送信中
-        submitBtn.disabled = true;
-        submitBtn.setAttribute('aria-disabled', 'true');
-        submitBtn.classList.add('is-loading');
-        btnLabel.textContent = '届けています\u2026';
-        formStatus.textContent = 'メッセージを送信しています\u2026';
+        setButtonLoading(true);
+        setFeedbackTone('info');
+        setFormStatus('メッセージを送信しています\u2026');
+        var payload = {
+          name: fields.name.el.value.trim(),
+          email: fields.email.el.value.trim(),
+          message: fields.message.el.value.trim()
+        };
 
         try {
-          await sendData({
-            name: fields.name.el.value.trim(),
-            email: fields.email.el.value.trim(),
-            message: fields.message.el.value.trim()
-          });
+          await sendDataWithRetry(payload);
 
-          formStatus.textContent = 'メッセージが送信されました';
+          setFeedbackTone('info');
+          setFormStatus('メッセージが送信されました。');
           formCard.classList.add('hidden');
 
           setTimeout(function () {
             successCard.classList.add('visible');
           }, 600);
 
-        } catch (_) {
-          submitBtn.disabled = false;
-          submitBtn.removeAttribute('aria-disabled');
-          submitBtn.classList.remove('is-loading');
-          btnLabel.textContent = '手紙を届ける\u2002\u2726';
-          formStatus.textContent = '送信に失敗しました。もう一度お試しください。';
+          void flushPendingQueue();
+        } catch (err) {
+          setButtonLoading(false);
+          if (err.retriable) {
+            if (queueFailedSubmission(payload, err)) {
+              setFeedbackTone('error');
+              setFormStatus('通信が不安定なため端末に一時保存しました。オンライン復帰後に自動再送します。');
+              return;
+            }
+            setFeedbackTone('error');
+            setFormStatus('送信に失敗しました。通信環境を確認して再度お試しください。');
+            return;
+          }
+          setFeedbackTone('error');
+          setFormStatus(err.message || '送信に失敗しました。時間をおいて再度お試しください。');
         }
       });
+
+      window.addEventListener('online', function () {
+        setFeedbackTone('info');
+        setFormStatus('通信が復旧しました。一時保存したメッセージを再送しています\u2026');
+        void flushPendingQueue();
+      });
+
+      setTimeout(function () {
+        void flushPendingQueue();
+      }, 400);
     })();
   </script>
 </body>
