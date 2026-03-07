@@ -91,3 +91,16 @@ limit 200;
 - APIログに `[api/messages] submit failed` が増加していないか
 - `form_submissions` の `submitted_at` が継続して増えているか
 - 一時保存メッセージの表示報告が増えていないか
+
+## 8. CLI実施ログ（2026-03-07）
+- Supabase project: `vcqdcvtmjbqpzqirlyjr`（`Genkoujar`）
+- 本番デプロイURL: `https://mezame-letter.vercel.app`
+- 実行済み:
+  - `supabase login`
+  - `supabase link --project-ref vcqdcvtmjbqpzqirlyjr`
+  - `supabase migration new create_form_submissions_table`
+  - `vercel env add` で `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_MESSAGES_TABLE` / `SUPABASE_SCHEMA` を `production`, `preview`, `development` に設定
+  - `vercel --prod --yes` で再デプロイ
+- 備考:
+  - `supabase db push` はDBパスワード必須のため、今回は Management API (`/v1/projects/{ref}/database/query`) でDDLを適用
+  - `agent-browser` で正常送信・入力バリデーション失敗・オフライン再送を確認し、`public.form_submissions` への保存をSQL照会で検証済み
