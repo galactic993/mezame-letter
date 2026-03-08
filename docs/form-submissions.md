@@ -114,28 +114,5 @@ limit 200;
 - 一時保存メッセージの表示報告が増えていないか
 
 ## 8. CLI実施ログ（2026-03-07）
-- Supabase project: `vcqdcvtmjbqpzqirlyjr`（`Genkoujar`）
-- 本番デプロイURL: `https://mezame-letter.vercel.app`
-- 実行済み:
-  - `supabase login`
-  - `supabase link --project-ref vcqdcvtmjbqpzqirlyjr`
-  - `supabase migration new create_form_submissions_table`
-  - `vercel env add` で `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_MESSAGES_TABLE` / `SUPABASE_SCHEMA` を `production`, `preview`, `development` に設定
-  - `vercel --prod --yes` で再デプロイ
-- 備考:
-  - `supabase db push` はDBパスワード必須のため、今回は Management API (`/v1/projects/{ref}/database/query`) でDDLを適用
-  - Management API でDDL適用後、`supabase_migrations.schema_migrations` 同期のため `supabase migration repair 20260307033114 --status applied` を実行（`20260307033114` は migration ファイル名先頭のバージョン）
-  - `agent-browser` で正常送信・入力バリデーション失敗・オフライン再送を確認し、`public.form_submissions` への保存をSQL照会で検証済み
-
-## 9. 保存先プロジェクト切替ログ（2026-03-07）
-- 新規作成プロジェクト: `gzwyocsolpqcnpqnlmmx`（`mezame-letter-forms-v2`）
-- 旧プロジェクト: `vcqdcvtmjbqpzqirlyjr`（`Genkoujar`）
-- 実行済み:
-  - `supabase projects create mezame-letter-forms-v2 --org-id pzffudftwdztcaqeazgq --region ap-northeast-1`
-  - `supabase link --project-ref gzwyocsolpqcnpqnlmmx`
-  - `supabase db push --include-all` で `form_submissions` を新規作成
-  - `vercel env add --force` で `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を新プロジェクト値に更新（production/preview/development）
-  - `vercel --prod --yes` で本番再デプロイ
-- 検証結果:
-  - `POST https://mezame-letter.vercel.app/api/messages` のテスト送信が新プロジェクト `public.form_submissions` に保存されることを確認
-  - 同一テストデータが旧プロジェクトに保存されていないことを確認
+- 実行ログの詳細（project ref / org id / 実行コマンド / デプロイURL）は可変情報のため、チケット `MEZ-140` の `## Codex Workpad` に集約する。
+- 本ドキュメントは恒久運用手順（セットアップ、閲覧導線、再送戦略、監視ポイント）のみを保持する。
