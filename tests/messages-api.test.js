@@ -114,6 +114,7 @@ test('GETは405を返す', async function () {
 });
 
 test('バリデーションエラー時は400を返す', async function () {
+  var fetchCalls = 0;
   var result = await invokeHandler(
     {
       method: 'POST',
@@ -127,6 +128,10 @@ test('バリデーションエラー時は400を返す', async function () {
       env: {
         SUPABASE_URL: 'https://example.supabase.co',
         SUPABASE_SERVICE_ROLE_KEY: 'service-role-key'
+      },
+      fetchImpl: async function () {
+        fetchCalls += 1;
+        throw new Error('fetch should not be called for validation errors');
       }
     }
   );
@@ -134,6 +139,7 @@ test('バリデーションエラー時は400を返す', async function () {
   assert.equal(result.statusCode, 400);
   assert.equal(result.body.ok, false);
   assert.match(result.body.message, /メールアドレス/);
+  assert.equal(fetchCalls, 0);
 });
 
 test('正常系ではSupabaseへ保存し201を返す', async function () {

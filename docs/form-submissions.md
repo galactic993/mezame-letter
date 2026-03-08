@@ -30,8 +30,14 @@ create table if not exists public.form_submissions (
   message text not null,
   source text not null default 'mezame-letter',
   user_agent text,
-  submitted_at timestamptz not null default timezone('utc', now()),
-  created_at timestamptz not null default timezone('utc', now())
+  submitted_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  constraint form_submissions_name_len check (char_length(name) <= 80),
+  constraint form_submissions_email_len check (char_length(email) <= 254),
+  constraint form_submissions_message_len check (char_length(message) <= 5000),
+  constraint form_submissions_user_agent_len check (
+    user_agent is null or char_length(user_agent) <= 512
+  )
 );
 
 create index if not exists form_submissions_submitted_at_idx
@@ -109,6 +115,7 @@ limit 200;
   - `vercel --prod --yes` で再デプロイ
 - 備考:
   - `supabase db push` はDBパスワード必須のため、今回は Management API (`/v1/projects/{ref}/database/query`) でDDLを適用
+  - Management API でDDL適用後、`supabase_migrations.schema_migrations` 同期のため `supabase migration repair 20260307033114 --status applied` を実行（`20260307033114` は migration ファイル名先頭のバージョン）
   - `agent-browser` で正常送信・入力バリデーション失敗・オフライン再送を確認し、`public.form_submissions` への保存をSQL照会で検証済み
 
 ## 9. 保存先プロジェクト切替ログ（2026-03-07）
