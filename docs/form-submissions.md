@@ -32,6 +32,9 @@ create table if not exists public.form_submissions (
   user_agent text,
   submitted_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
+  constraint form_submissions_name_not_blank check (char_length(btrim(name)) > 0),
+  constraint form_submissions_email_not_blank check (char_length(btrim(email)) > 0),
+  constraint form_submissions_message_not_blank check (char_length(btrim(message)) > 0),
   constraint form_submissions_name_len check (char_length(name) <= 80),
   constraint form_submissions_email_len check (char_length(email) <= 254),
   constraint form_submissions_message_len check (char_length(message) <= 5000),
@@ -44,6 +47,12 @@ create index if not exists form_submissions_submitted_at_idx
   on public.form_submissions (submitted_at desc);
 
 alter table public.form_submissions enable row level security;
+```
+
+SQL Editor などで手動適用した場合は migration 履歴も同期する:
+
+```bash
+supabase migration repair 20260307033114 --status applied
 ```
 
 注: 現行APIは `SUPABASE_SERVICE_ROLE_KEY` でサーバー側書き込みを行うため、RLSは有効のままで運用可能。
