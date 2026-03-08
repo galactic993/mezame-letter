@@ -14,7 +14,13 @@
   - 4xx/5xx のレスポンス整理
 
 ## 3. Supabase テーブル作成
-Supabase SQL Editor で以下を実行:
+リポジトリには migration を同梱している。まずは `supabase/migrations/20260307033114_create_form_submissions_table.sql` を適用する。
+
+```bash
+supabase db push
+```
+
+CLI が利用できない場合は、Supabase SQL Editor で以下を実行:
 
 ```sql
 create table if not exists public.form_submissions (
@@ -24,14 +30,29 @@ create table if not exists public.form_submissions (
   message text not null,
   source text not null default 'mezame-letter',
   user_agent text,
-  submitted_at timestamptz not null default timezone('utc', now()),
-  created_at timestamptz not null default timezone('utc', now())
+  submitted_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  constraint form_submissions_name_not_blank check (char_length(btrim(name)) > 0),
+  constraint form_submissions_email_not_blank check (char_length(btrim(email)) > 0),
+  constraint form_submissions_message_not_blank check (char_length(btrim(message)) > 0),
+  constraint form_submissions_name_len check (char_length(name) <= 80),
+  constraint form_submissions_email_len check (char_length(email) <= 254),
+  constraint form_submissions_message_len check (char_length(message) <= 5000),
+  constraint form_submissions_user_agent_len check (
+    user_agent is null or char_length(user_agent) <= 512
+  )
 );
 
 create index if not exists form_submissions_submitted_at_idx
   on public.form_submissions (submitted_at desc);
 
 alter table public.form_submissions enable row level security;
+```
+
+SQL Editor などで手動適用した場合は migration 履歴も同期する:
+
+```bash
+supabase migration repair 20260307033114 --status applied
 ```
 
 注: 現行APIは `SUPABASE_SERVICE_ROLE_KEY` でサーバー側書き込みを行うため、RLSは有効のままで運用可能。
@@ -91,3 +112,7 @@ limit 200;
 - APIログに `[api/messages] submit failed` が増加していないか
 - `form_submissions` の `submitted_at` が継続して増えているか
 - 一時保存メッセージの表示報告が増えていないか
+
+## 8. CLI実施ログ（2026-03-07）
+- 実行ログの詳細（project ref / org id / 実行コマンド / デプロイURL）は可変情報のため、チケット `MEZ-140` の `## Codex Workpad` に集約する。
+- 本ドキュメントは恒久運用手順（セットアップ、閲覧導線、再送戦略、監視ポイント）のみを保持する。
