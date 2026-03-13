@@ -161,6 +161,25 @@ test('createAssignments は自己配送なしで 1568 回シャッフル結果�
   assert.notEqual(assignments[0].senderEmail, assignments[0].recipientEmail);
   assert.equal(assignments[0].shuffleCount, 1568);
   assert.match(assignments[0].accessToken, /^[a-f0-9]{48}$/);
+  assert.equal(assignments[0].senderMessageCount, 1);
+});
+
+test('createAssignments は重複投稿があっても配信本文は最新1件に絞る', function () {
+  var participants = deliveryLib.buildParticipantGroups([
+    { id: 1, name: 'Alice', email: 'alice@example.com', message: '最初の投稿', submitted_at: '2026-03-10T00:00:00.000Z' },
+    { id: 2, name: 'Alice', email: 'alice@example.com', message: '最後の投稿', submitted_at: '2026-03-11T00:00:00.000Z' },
+    { id: 3, name: 'Bob', email: 'bob@example.com', message: 'B', submitted_at: '2026-03-10T00:00:00.000Z' }
+  ]);
+  var assignments = deliveryLib.createAssignments(participants, {
+    shuffleCount: 1,
+    randomIntFn: function () {
+      return 0;
+    }
+  });
+
+  assert.equal(assignments[0].senderMessageCount, 1);
+  assert.equal(assignments[0].senderMessages.length, 1);
+  assert.equal(assignments[0].senderMessages[0].message, '最後の投稿');
 });
 
 test('resolveCampaignConfig は締切の90分後を既定の送信開始日時にする', function () {
@@ -176,6 +195,7 @@ test('resolveCampaignConfig は締切の90分後を既定の送信開始日時�
 test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる', function () {
   var content = deliveryLib.buildEmailContent({
     senderName: 'Alice',
+    senderMessages: [{ id: 1, message: '起きて、光を見て。' }],
     senderMessageCount: 1,
     recipientName: 'Bob',
     accessToken: 'abc123token'
@@ -187,6 +207,7 @@ test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる'
   var payload = deliveryLib.buildEmailPayload({
     recipientEmail: 'bob@example.com',
     senderName: 'Alice',
+    senderMessages: [{ id: 1, message: '起きて、光を見て。' }],
     senderMessageCount: 1,
     recipientName: 'Bob',
     accessToken: 'abc123token'
@@ -199,7 +220,12 @@ test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる'
 
   assert.equal(content.subject, '【目醒めレター】あなたへ届いたメッセージ');
   assert.match(content.text, /2026年3月13日/);
-  assert.match(content.html, /message\.html\?token=abc123token/);
+  assert.match(content.text, /起きて、光を見て。/);
+  assert.match(content.html, /起きて、光を見て。/);
+  assert.doesNotMatch(content.text, /Alice/);
+  assert.doesNotMatch(content.html, /Alice/);
+  assert.doesNotMatch(content.text, /message\.html/);
+  assert.doesNotMatch(content.html, /message\.html/);
   assert.equal(payload.from, 'hello@example.com');
   assert.equal(payload.reply_to, 'reply@example.com');
   assert.equal(payload.subject, content.subject);
@@ -371,7 +397,8 @@ test('send-random-messages は未作成の割り当てを生成して下書き�
       && entry.options.method === 'POST'
       && /"status":"draft"/.test(entry.options.body)
       && /"email_subject":"【目醒めレター】あなたへ届いたメッセージ"/.test(entry.options.body)
-      && /message\.html\?token=[a-f0-9]{48}/.test(entry.options.body);
+      && /"email_text":"Bob さんへ\\n\\n2026年3月12日の目醒めレターが届いています。\\n\\nA\\n\\nこのメールは目醒めレター企画のランダム送信でお届けしています。"/.test(entry.options.body)
+      && !/Alice さんから/.test(entry.options.body);
   }));
 });
 

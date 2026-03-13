@@ -82,6 +82,7 @@ async function fetchAssignments(config) {
 function buildDraftFields(config, assignment) {
   var content = deliveryLib.buildEmailContent({
     senderName: assignment.senderName || assignment.sender_name,
+    senderMessages: assignment.senderMessages || assignment.sender_messages,
     senderMessageCount: assignment.senderMessageCount || assignment.sender_message_count,
     recipientName: assignment.recipientName || assignment.recipient_name,
     accessToken: assignment.accessToken || assignment.access_token

@@ -139,7 +139,6 @@ test('message-view は token からメッセージを返して開封時刻を更
                 {
                   id: 11,
                   campaign_key: '2026-03-13',
-                  sender_name: 'Alice',
                   sender_messages: [{ id: 1, message: '起きて、光を見て。' }],
                   sender_message_count: 1,
                   recipient_name: 'Bob',
@@ -169,7 +168,6 @@ test('message-view は token からメッセージを返して開封時刻を更
   assert.equal(result.statusCode, 200);
   assert.equal(result.body.ok, true);
   assert.equal(result.body.recipientName, 'Bob');
-  assert.equal(result.body.senderName, 'Alice');
   assert.equal(result.body.messages.length, 1);
   assert.match(fetchCalls[1].options.body, /"view_count":1/);
 });

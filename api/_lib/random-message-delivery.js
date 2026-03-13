@@ -113,6 +113,8 @@ function createAssignments(participants, options) {
   }
 
   for (index = 0; index < participants.length; index += 1) {
+    var deliverableMessages = selectDeliverableMessages(participants[index].submissions);
+
     if (participants[index].email === recipients[index].email) {
       throw new Error('自己配送を回避できませんでした。');
     }
@@ -120,8 +122,8 @@ function createAssignments(participants, options) {
     assignments.push({
       senderEmail: participants[index].email,
       senderName: participants[index].name,
-      senderMessages: participants[index].submissions,
-      senderMessageCount: participants[index].submissions.length,
+      senderMessages: deliverableMessages,
+      senderMessageCount: deliverableMessages.length,
       recipientEmail: recipients[index].email,
       recipientName: recipients[index].name,
       shuffleCount: shuffleCount,
@@ -141,23 +143,25 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function formatMessageListHtml(messages) {
-  return messages.map(function (entry, index) {
-    var lines = escapeHtml(entry.message || '').replace(/\r?\n/g, '<br>');
-    return '<section style="margin:0 0 24px;">'
-      + '<p style="margin:0 0 8px;font-size:13px;color:#8a7e72;">メッセージ ' + (index + 1) + '</p>'
-      + '<div style="padding:16px 18px;border-radius:14px;background:#f6efe7;color:#2d1f12;line-height:1.9;">' + lines + '</div>'
-      + '</section>';
-  }).join('');
+function selectDeliverableMessages(messages) {
+  var normalizedMessages = Array.isArray(messages) ? messages.filter(function (entry) {
+    return normalizeString(entry && entry.message);
+  }) : [];
+
+  if (normalizedMessages.length === 0) {
+    return [{
+      id: null,
+      submittedAt: null,
+      message: ''
+    }];
+  }
+
+  return [normalizedMessages[normalizedMessages.length - 1]];
 }
 
-function formatMessageListText(messages) {
-  return messages.map(function (entry, index) {
-    return [
-      'メッセージ ' + (index + 1),
-      entry.message || ''
-    ].join('\n');
-  }).join('\n\n');
+function getPrimaryMessageText(messages) {
+  var deliverableMessages = selectDeliverableMessages(messages);
+  return normalizeString(deliverableMessages[0] && deliverableMessages[0].message);
 }
 
 function resolveBaseUrl(value) {
@@ -195,24 +199,18 @@ function formatJstDateLabel(date) {
 
 function buildEmailContent(assignment, config) {
   var sendDate = config.sendDate instanceof Date ? config.sendDate : parseDateOrThrow(config.sendDate, 'sendDate');
-  var senderName = normalizeString(assignment.senderName) || '目醒め人';
   var sendDateLabel = formatJstDateLabel(sendDate);
-  var accessUrl = buildAccessUrl(assignment.accessToken, {
-    baseUrl: config.baseUrl
-  });
-  var messageCountLabel = assignment.senderMessageCount > 1
-    ? senderName + ' さんから届いた ' + assignment.senderMessageCount + ' 通のメッセージ'
-    : senderName + ' さんから届いたメッセージ';
+  var messageText = getPrimaryMessageText(assignment.senderMessages);
+  var messageHtml = escapeHtml(messageText).replace(/\r?\n/g, '<br>');
   var subject = '【目醒めレター】あなたへ届いたメッセージ';
   var textBody = [
     assignment.recipientName + ' さんへ',
     '',
     sendDateLabel + 'の目醒めレターが届いています。',
-    messageCountLabel + ' は、下の専用ページから受け取れます。',
     '',
-    accessUrl,
+    messageText,
     '',
-    'このURLはあなた専用です。このメールは目醒めレター企画のランダム送信でお届けしています。'
+    'このメールは目醒めレター企画のランダム送信でお届けしています。'
   ].join('\n');
 
   var htmlBody = [
@@ -220,11 +218,12 @@ function buildEmailContent(assignment, config) {
     '<div style="max-width:640px;margin:0 auto;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:32px 24px;">',
     '<p style="margin:0 0 12px;font-size:14px;letter-spacing:0.08em;color:#d4a574;">MEZAME LETTER</p>',
     '<h1 style="margin:0 0 16px;font-family:\'Noto Serif JP\',serif;font-size:28px;line-height:1.4;color:#f8f1ea;">あなた宛ての目醒めレターが届いています</h1>',
-    '<p style="margin:0 0 24px;line-height:1.9;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>' + escapeHtml(sendDateLabel) + 'に循環する ' + escapeHtml(messageCountLabel) + ' は、専用ページで開封できます。</p>',
-    '<p style="margin:0 0 24px;"><a href="' + escapeHtml(accessUrl) + '" style="display:inline-block;padding:14px 22px;border-radius:999px;background:#d4a574;color:#171127;text-decoration:none;font-weight:700;">メッセージをひらく</a></p>',
-    '<p style="margin:0 0 16px;font-size:14px;line-height:1.8;color:#d9d0c6;">ボタンが開けない場合は、こちらのURLをブラウザに貼り付けてください。</p>',
-    '<p style="margin:0 0 24px;font-size:13px;line-height:1.8;word-break:break-all;color:#f3eadf;">' + escapeHtml(accessUrl) + '</p>',
-    '<p style="margin:24px 0 0;font-size:13px;line-height:1.8;color:#bfb4aa;">このURLは受信者ごとに個別発行されています。</p>',
+    '<p style="margin:0 0 24px;line-height:1.9;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>' + escapeHtml(sendDateLabel) + 'の目醒めレターをお届けします。</p>',
+    '<section style="margin:0 0 24px;">'
+      + '<p style="margin:0 0 8px;font-size:13px;color:#d9d0c6;">あなたに届いたメッセージ</p>'
+      + '<div style="padding:16px 18px;border-radius:14px;background:#f6efe7;color:#2d1f12;line-height:1.9;">' + messageHtml + '</div>'
+      + '</section>',
+    '<p style="margin:24px 0 0;font-size:13px;line-height:1.8;color:#bfb4aa;">このメールは目醒めレター企画のランダム送信でお届けしています。</p>',
     '</div>',
     '</div>'
   ].join('');
@@ -232,8 +231,7 @@ function buildEmailContent(assignment, config) {
   return {
     subject: subject,
     html: htmlBody,
-    text: textBody,
-    accessUrl: accessUrl
+    text: textBody
   };
 }
 
@@ -440,6 +438,7 @@ module.exports = {
   buildEmailPayload: buildEmailPayload,
   buildParticipantGroups: buildParticipantGroups,
   createAssignments: createAssignments,
+  getPrimaryMessageText: getPrimaryMessageText,
   normalizeEmail: normalizeEmail,
   normalizeString: normalizeString,
   resolveCampaignConfig: resolveCampaignConfig

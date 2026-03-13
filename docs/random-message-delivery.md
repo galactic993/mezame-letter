@@ -1,7 +1,7 @@
 # ランダムメッセージ送信運用ガイド
 
 ## 1. 目的
-`public.form_submissions` に保存された投稿を対象に、締切後に 1 回だけランダム割り当てし、受信者ごとの専用URLを含むメール下書きを DB に保存する。実際の Resend 送信は別 API で実行する。
+`public.form_submissions` に保存された投稿を対象に、締切後に 1 回だけランダム割り当てし、メッセージ本文を直接含む匿名メール下書きを DB に保存する。実際の Resend 送信は別 API で実行する。
 
 ## 2. 実装構成
 - API: `api/send-random-messages.js`
@@ -11,6 +11,7 @@
   - 同一メールアドレスの投稿を 1 送信者グループに束ねる
   - 元データから独立に 1568 回 Sattolo shuffle を実行し、自己配送なしの組み合わせを作る
   - 配信割り当て、受信者専用 `access_token`、メール件名・本文の下書きを `public.message_delivery_assignments` に永続化
+  - 下書き本文には送信者名を含めず、代表メッセージ 1 件だけを直接掲載する
 - API: `api/send-random-message-drafts.js`
   - `GET /api/send-random-message-drafts` または `POST /api/send-random-message-drafts`
   - `draft` / `planned` / `failed` のレコードだけを `processing` に claim して Resend 送信する
@@ -78,9 +79,10 @@ supabase db push
 2. メールアドレス単位で投稿を束ねる
 3. 参加者一覧を元に、1568 回独立に shuffle した最後の結果を採用する
 4. 作成した割り当てを `message_delivery_assignments` に保存し、件名・HTML・テキスト本文も下書きとして保存する
-5. 送信タイミングで `api/send-random-message-drafts` を呼び、`draft` / `failed` のレコードを `processing` に claim してから Resend 送信する
-6. 受信者が専用URLを開くと `message.html` が `api/message-view` から本文を取得して表示する
-7. 成功時は `sent`、失敗時は `failed` に更新する
+5. 同一メールアドレスに複数投稿がある場合でも、受信メールに掲載する本文は代表 1 件だけに絞る
+6. 送信タイミングで `api/send-random-message-drafts` を呼び、`draft` / `failed` のレコードを `processing` に claim してから Resend 送信する
+7. 受信者が専用URLを開くと `message.html` が `api/message-view` から本文を取得して表示する
+8. 成功時は `sent`、失敗時は `failed` に更新する
 
 ## 6. 今回の設定例
 1. Xserver で `mezame-letter@christmas-planet.co.jp` を作成する
@@ -106,6 +108,7 @@ order by id asc;
 
 ## 8. 注意点
 - 一意なメールアドレスが 2 件未満の場合は配信しない
-- 同一メールアドレスの複数投稿は 1 人分として同じ受信者にまとめて送る
+- 同一メールアドレスの複数投稿は 1 人分として扱い、受信メールには代表 1 件のみ掲載する
+- 受信者向けのメール本文・専用ページには送信者名を表示しない
 - `message_delivery_assignments` を作成した後は、そのスナップショットを基準にするため、締切後の新規投稿は配信対象に入らない
 - `api/send-random-messages` は既存の `planned` レコードを検出すると `draft` へ補完し、下書き本文をバックフィルする

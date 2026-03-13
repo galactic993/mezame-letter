@@ -72,7 +72,7 @@ function readToken(req) {
 
 async function fetchAssignmentByToken(config, token) {
   var query = [
-    'select=id,campaign_key,sender_name,sender_messages,sender_message_count,recipient_name,opened_at,view_count',
+    'select=id,campaign_key,sender_messages,sender_message_count,recipient_name,opened_at,view_count',
     'access_token=eq.' + encodeURIComponent(token),
     'limit=1'
   ].join('&');
@@ -128,10 +128,11 @@ module.exports = async function handler(req, res) {
       ok: true,
       campaignKey: assignment.campaign_key,
       recipientName: assignment.recipient_name,
-      senderName: assignment.sender_name,
       senderMessageCount: assignment.sender_message_count,
       openedAt: assignment.opened_at,
-      messages: Array.isArray(assignment.sender_messages) ? assignment.sender_messages : []
+      messages: [{
+        message: deliveryLib.getPrimaryMessageText(assignment.sender_messages)
+      }]
     });
   } catch (err) {
     writeJson(res, err && err.statusCode ? err.statusCode : 500, {
