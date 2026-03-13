@@ -120,7 +120,8 @@
     body.is-opened .shell {
       min-height: 100%;
       gap: clamp(14px, 2vw, 20px);
-      grid-template-rows: auto auto minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      align-content: stretch;
     }
 
     .shell::before {
@@ -198,6 +199,10 @@
       opacity: 0;
       transform: translateY(-20px) scale(0.98);
       pointer-events: none;
+    }
+
+    .stage.is-collapsed {
+      display: none;
     }
 
     .stage-text {
@@ -442,6 +447,7 @@
       height: 100%;
       display: flex;
       align-items: stretch;
+      justify-self: center;
     }
 
     .letter-paper {
@@ -736,6 +742,10 @@
         window.setTimeout(function () {
           statusEl.classList.add('is-hidden');
         }, HIDE_STAGE_DELAY_MS);
+
+        window.setTimeout(function () {
+          statusEl.classList.add('is-collapsed');
+        }, HIDE_STAGE_DELAY_MS + 720);
       }
 
       async function run() {
