@@ -124,14 +124,6 @@
       font-weight: 600;
     }
 
-    .lead {
-      max-width: 560px;
-      margin: 20px auto 0;
-      font-size: 15px;
-      line-height: 1.9;
-      color: var(--muted);
-    }
-
     .status {
       display: grid;
       place-items: center;
@@ -171,19 +163,6 @@
       transform: translateY(0);
     }
 
-    .message-intro {
-      max-width: 620px;
-      margin: 0 auto 22px;
-      padding: 18px 20px;
-      border-radius: 22px;
-      background: var(--card);
-      border: 1px solid var(--line);
-      backdrop-filter: blur(10px);
-      text-align: center;
-      line-height: 1.9;
-      color: var(--muted);
-    }
-
     .message-list {
       display: grid;
       gap: 18px;
@@ -209,22 +188,6 @@
         linear-gradient(135deg, rgba(255,255,255,0.22), transparent 30%),
         radial-gradient(circle at top right, rgba(242,199,124,0.18), transparent 34%);
       pointer-events: none;
-    }
-
-    .message-index {
-      position: relative;
-      display: inline-flex;
-      min-width: 42px;
-      justify-content: center;
-      align-items: center;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(242,199,124,0.15);
-      color: var(--accent-strong);
-      font-size: 12px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      margin-bottom: 14px;
     }
 
     .message-body {
@@ -301,7 +264,6 @@
       <header class="hero">
         <p class="eyebrow">Mezame Letter</p>
         <h1>Open Your Sky</h1>
-        <p class="lead">このページは、あなた宛てに届いた目醒めレターを開くための専用ページです。静かな演出のあとに、預けられた言葉が現れます。</p>
       </header>
 
       <section class="status" id="status">
@@ -312,7 +274,6 @@
       </section>
 
       <section class="content" id="content" aria-live="polite">
-        <p class="message-intro" id="messageIntro">あなたに託された言葉です。</p>
         <div class="message-list" id="messageList"></div>
       </section>
     </section>
@@ -323,7 +284,6 @@
       var statusEl = document.getElementById('status');
       var statusTextEl = document.getElementById('statusText');
       var contentEl = document.getElementById('content');
-      var messageIntroEl = document.getElementById('messageIntro');
       var messageListEl = document.getElementById('messageList');
 
       function setStatus(message) {
@@ -351,7 +311,6 @@
       function createMessageCard(message, index) {
         return [
           '<article class="message-card" style="animation-delay:' + (index * 180) + 'ms;">',
-          '<span class="message-index">Message ' + (index + 1) + '</span>',
           '<div class="message-body">' + escapeHtml(message) + '</div>',
           '</article>'
         ].join('');
@@ -363,10 +322,6 @@
       }
 
       function renderPayload(payload) {
-        var count = Array.isArray(payload.messages) ? payload.messages.length : 0;
-        messageIntroEl.textContent = count > 1
-          ? 'あなたに託された ' + count + ' 通の言葉です。'
-          : 'あなたに託された言葉です。';
         messageListEl.innerHTML = (payload.messages || []).map(function (entry, index) {
           var text = entry && entry.message ? entry.message : '';
           return createMessageCard(text, index);
