@@ -220,8 +220,11 @@ test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる'
 
   assert.equal(content.subject, '【目醒めレター】あなたへ届いたメッセージ');
   assert.match(content.text, /2026年3月13日/);
+  assert.match(content.text, /あなたに届いたメッセージ/);
   assert.match(content.text, /起きて、光を見て。/);
+  assert.match(content.html, /Message/);
   assert.match(content.html, /起きて、光を見て。/);
+  assert.match(content.html, /font-size:24px/);
   assert.doesNotMatch(content.text, /Alice/);
   assert.doesNotMatch(content.html, /Alice/);
   assert.doesNotMatch(content.text, /message\.html/);
@@ -397,7 +400,8 @@ test('send-random-messages は未作成の割り当てを生成して下書き�
       && entry.options.method === 'POST'
       && /"status":"draft"/.test(entry.options.body)
       && /"email_subject":"【目醒めレター】あなたへ届いたメッセージ"/.test(entry.options.body)
-      && /"email_text":"Bob さんへ\\n\\n2026年3月12日の目醒めレターが届いています。\\n\\nA\\n\\nこのメールは目醒めレター企画のランダム送信でお届けしています。"/.test(entry.options.body)
+      && /"email_text":"Bob さんへ\\n\\n2026年3月12日の目醒めレターが届いています。\\n\\n────────────\\nあなたに届いたメッセージ\\n────────────\\n\\nA\\n\\nこのメールは目醒めレター企画のランダム送信でお届けしています。"/.test(entry.options.body)
+      && /font-size:24px/.test(entry.options.body)
       && !/Alice さんから/.test(entry.options.body);
   }));
 });
