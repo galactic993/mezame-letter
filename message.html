@@ -171,33 +171,17 @@
       transform: translateY(0);
     }
 
-    .meta {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 22px;
-    }
-
-    .meta-card {
-      padding: 18px 18px 16px;
+    .message-intro {
+      max-width: 620px;
+      margin: 0 auto 22px;
+      padding: 18px 20px;
       border-radius: 22px;
       background: var(--card);
       border: 1px solid var(--line);
       backdrop-filter: blur(10px);
-    }
-
-    .meta-label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 12px;
-      letter-spacing: 0.2em;
-      color: var(--accent);
-      text-transform: uppercase;
-    }
-
-    .meta-value {
-      font-size: 20px;
-      line-height: 1.45;
+      text-align: center;
+      line-height: 1.9;
+      color: var(--muted);
     }
 
     .message-list {
@@ -305,10 +289,6 @@
         border-radius: 24px;
       }
 
-      .meta {
-        grid-template-columns: 1fr;
-      }
-
       .message-body {
         font-size: 15px;
       }
@@ -332,16 +312,7 @@
       </section>
 
       <section class="content" id="content" aria-live="polite">
-        <div class="meta">
-          <article class="meta-card">
-            <span class="meta-label">To</span>
-            <strong class="meta-value" id="recipientName">-</strong>
-          </article>
-          <article class="meta-card">
-            <span class="meta-label">From</span>
-            <strong class="meta-value" id="senderName">-</strong>
-          </article>
-        </div>
+        <p class="message-intro" id="messageIntro">あなたに託された言葉です。</p>
         <div class="message-list" id="messageList"></div>
       </section>
     </section>
@@ -352,8 +323,7 @@
       var statusEl = document.getElementById('status');
       var statusTextEl = document.getElementById('statusText');
       var contentEl = document.getElementById('content');
-      var recipientNameEl = document.getElementById('recipientName');
-      var senderNameEl = document.getElementById('senderName');
+      var messageIntroEl = document.getElementById('messageIntro');
       var messageListEl = document.getElementById('messageList');
 
       function setStatus(message) {
@@ -393,8 +363,10 @@
       }
 
       function renderPayload(payload) {
-        recipientNameEl.textContent = payload.recipientName || 'あなた';
-        senderNameEl.textContent = payload.senderName || '目醒め人';
+        var count = Array.isArray(payload.messages) ? payload.messages.length : 0;
+        messageIntroEl.textContent = count > 1
+          ? 'あなたに託された ' + count + ' 通の言葉です。'
+          : 'あなたに託された言葉です。';
         messageListEl.innerHTML = (payload.messages || []).map(function (entry, index) {
           var text = entry && entry.message ? entry.message : '';
           return createMessageCard(text, index);
