@@ -222,9 +222,11 @@ test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる'
   assert.match(content.text, /目醒め人から預かったお手紙をお届けします。/);
   assert.match(content.text, /あなたに届いたメッセージ/);
   assert.match(content.text, /起きて、光を見て。/);
+  assert.match(content.text, /※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。/);
   assert.match(content.html, /Message/);
   assert.match(content.html, /起きて、光を見て。/);
   assert.match(content.html, /font-size:24px/);
+  assert.match(content.html, /あなた宛に、目醒め人からのお手紙が届いています/);
   assert.match(content.text, /この度はメッセージを送信していただき、ありがとうございました。/);
   assert.match(content.text, /あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。/);
   assert.match(content.html, /目醒め人から預かったお手紙をお届けします。/);
@@ -232,7 +234,7 @@ test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる'
   assert.doesNotMatch(content.html, /Alice/);
   assert.doesNotMatch(content.text, /message\.html/);
   assert.doesNotMatch(content.html, /message\.html/);
-  assert.equal(payload.from, 'hello@example.com');
+  assert.equal(payload.from, '中村咲太ワークショップ事務局 <hello@example.com>');
   assert.equal(payload.reply_to, 'reply@example.com');
   assert.equal(payload.subject, content.subject);
   assert.equal(payload.html, content.html);
@@ -423,7 +425,7 @@ test('send-random-messages は未作成の割り当てを生成して下書き�
       && entry.options.method === 'POST'
       && /"status":"draft"/.test(entry.options.body)
       && /"email_subject":"【目醒めレター】あなたへ届いたメッセージ"/.test(entry.options.body)
-      && /"email_text":"Bob さんへ\\n\\n目醒め人から預かったお手紙をお届けします。\\n\\n────────────\\nあなたに届いたメッセージ\\n────────────\\n\\nA\\n\\nこの度はメッセージを送信していただき、ありがとうございました。\\nあなたの大切なメッセージも、目醒め人に大切にお届けいたしました。"/.test(entry.options.body)
+      && /"email_text":"Bob さんへ\\n\\n目醒め人から預かったお手紙をお届けします。\\n\\n────────────\\nあなたに届いたメッセージ\\n────────────\\n\\nA\\n\\nこの度はメッセージを送信していただき、ありがとうございました。\\nあなたの大切なメッセージも、目醒め人に大切にお届けいたしました。\\n\\n※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。"/.test(entry.options.body)
       && /font-size:24px/.test(entry.options.body)
       && !/Alice さんから/.test(entry.options.body);
   }));
@@ -667,6 +669,7 @@ test('send-random-message-drafts は保存済み下書きを送信済みに更�
   assert.ok(fetchCalls.some(function (entry) {
     return entry.url === 'https://api.resend.com/emails'
       && /"subject":"件名A"/.test(entry.options.body)
+      && /"from":"中村咲太ワークショップ事務局 <hello@example.com>"/.test(entry.options.body)
       && /"reply_to":"reply@example.com"/.test(entry.options.body);
   }));
 });

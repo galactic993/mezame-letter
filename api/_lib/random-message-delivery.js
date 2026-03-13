@@ -7,6 +7,7 @@ var DEFAULT_ACCEPTANCE_DEADLINE_JST = '2026-03-11T23:59:59.999+09:00';
 var DEFAULT_SEND_DATE_JST = '2026-03-13T00:00:00+09:00';
 var DEFAULT_SEND_DELAY_MINUTES = 90;
 var DEFAULT_SHUFFLE_COUNT = 1568;
+var DEFAULT_FROM_NAME = '中村咲太ワークショップ事務局';
 
 function normalizeString(value) {
   if (typeof value !== 'string') {
@@ -178,6 +179,22 @@ function createAccessToken() {
   return crypto.randomBytes(24).toString('hex');
 }
 
+function resolveFromIdentity(value) {
+  var normalized = normalizeString(value);
+  var match;
+
+  if (!normalized) {
+    return '';
+  }
+
+  match = normalized.match(/<([^>]+)>/);
+  if (match && match[1]) {
+    return DEFAULT_FROM_NAME + ' <' + normalizeString(match[1]) + '>';
+  }
+
+  return DEFAULT_FROM_NAME + ' <' + normalized + '>';
+}
+
 function buildAccessUrl(token, config) {
   var baseUrl = resolveBaseUrl(config.baseUrl);
 
@@ -216,20 +233,23 @@ function buildEmailContent(assignment, config) {
     messageText,
     '',
     'この度はメッセージを送信していただき、ありがとうございました。',
-    'あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。'
+    'あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。',
+    '',
+    '※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。'
   ].join('\n');
 
   var htmlBody = [
     '<div style="font-family:\'Noto Sans JP\',\'Hiragino Sans\',sans-serif;background:#0a0a2e;padding:32px 16px;color:#e8e0d8;">',
     '<div style="max-width:640px;margin:0 auto;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:32px 24px;">',
     '<p style="margin:0 0 12px;font-size:14px;letter-spacing:0.08em;color:#d4a574;">MEZAME LETTER</p>',
-    '<h1 style="margin:0 0 16px;font-family:\'Noto Serif JP\',serif;font-size:28px;line-height:1.4;color:#f8f1ea;">あなた宛ての目醒めレターが届いています</h1>',
+    '<h1 style="margin:0 0 16px;font-family:\'Noto Serif JP\',serif;font-size:28px;line-height:1.4;color:#f8f1ea;">あなた宛に、目醒め人からのお手紙が届いています</h1>',
     '<p style="margin:0 0 20px;line-height:1.9;color:#ddd4ca;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>目醒め人から預かったお手紙をお届けします。</p>',
     '<section style="margin:0 0 28px;padding:22px 22px 24px;border-radius:22px;background:linear-gradient(180deg, rgba(240,200,127,0.22), rgba(255,255,255,0.08));border:1px solid rgba(240,200,127,0.42);box-shadow:0 18px 42px rgba(0,0,0,0.26);">'
       + '<p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.14em;color:#f3d8a0;text-transform:uppercase;">Message</p>'
       + '<div style="padding:20px 22px;border-radius:18px;background:#fff7ed;color:#1f140d;font-family:\'Noto Serif JP\',serif;font-size:24px;line-height:2;letter-spacing:0.03em;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);">' + messageHtml + '</div>'
       + '</section>',
     '<p style="margin:24px 0 0 0;font-size:13px;line-height:1.9;color:#bfb4aa;">この度はメッセージを送信していただき、ありがとうございました。<br>あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。</p>',
+    '<p style="margin:16px 0 0 0;font-size:12px;line-height:1.8;color:#9e9389;">※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。</p>',
     '</div>',
     '</div>'
   ].join('');
@@ -242,7 +262,7 @@ function buildEmailContent(assignment, config) {
 }
 
 function buildEmailPayload(assignment, config) {
-  var fromEmail = normalizeString(config.fromEmail);
+  var fromEmail = resolveFromIdentity(config.fromEmail);
   var replyToEmail = normalizeString(config.replyToEmail);
   var content = buildEmailContent(assignment, config);
   var payload = {
@@ -446,6 +466,7 @@ module.exports = {
   createAssignments: createAssignments,
   getPrimaryMessageText: getPrimaryMessageText,
   normalizeEmail: normalizeEmail,
+  resolveFromIdentity: resolveFromIdentity,
   normalizeString: normalizeString,
   resolveCampaignConfig: resolveCampaignConfig
 };

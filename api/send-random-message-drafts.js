@@ -134,7 +134,7 @@ function buildStoredEmailPayload(config, assignment) {
   }
 
   var payload = {
-    from: config.resendFromEmail,
+    from: deliveryLib.resolveFromIdentity(config.resendFromEmail),
     to: [assignment.recipient_email],
     subject: subject,
     html: html,
