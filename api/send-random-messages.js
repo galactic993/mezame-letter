@@ -78,7 +78,7 @@ async function fetchEligibleSubmissions(config) {
 
 async function fetchAssignments(config) {
   var query = [
-    'select=id,campaign_key,sender_email,sender_name,sender_messages,sender_message_count,recipient_email,recipient_name,shuffle_count,status,resend_email_id,sent_at,last_error',
+    'select=id,campaign_key,sender_email,sender_name,sender_messages,sender_message_count,recipient_email,recipient_name,shuffle_count,access_token,status,resend_email_id,sent_at,last_error',
     'campaign_key=eq.' + encodeURIComponent(config.campaignKey),
     'order=id.asc'
   ].join('&');
@@ -97,6 +97,7 @@ async function insertAssignments(config, assignments) {
       recipient_email: assignment.recipientEmail,
       recipient_name: assignment.recipientName,
       shuffle_count: assignment.shuffleCount,
+      access_token: assignment.accessToken,
       status: 'planned'
     };
   });
@@ -176,7 +177,8 @@ async function sendViaResend(config, assignment) {
     body: JSON.stringify(deliveryLib.buildEmailPayload(assignment, {
       fromEmail: config.resendFromEmail,
       replyToEmail: config.resendReplyToEmail,
-      sendDate: config.sendDate
+      sendDate: config.sendDate,
+      baseUrl: config.publicSiteUrl
     }))
   });
 
@@ -329,7 +331,8 @@ module.exports = async function handler(req, res) {
           senderMessages: claimed.sender_messages,
           senderMessageCount: claimed.sender_message_count,
           recipientEmail: claimed.recipient_email,
-          recipientName: claimed.recipient_name
+          recipientName: claimed.recipient_name,
+          accessToken: claimed.access_token
         });
 
         await markAssignmentSent(config, claimed.id, resendResponse && resendResponse.id);

@@ -16,6 +16,7 @@ var TRACKED_ENV_KEYS = [
   'RESEND_API_KEY',
   'RESEND_FROM_EMAIL',
   'RESEND_REPLY_TO_EMAIL',
+  'PUBLIC_SITE_URL',
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
   'SUPABASE_SCHEMA',
@@ -157,6 +158,7 @@ test('createAssignments は自己配送なしで 1568 回シャッフル結果�
   assert.equal(calls, 1568 * 2);
   assert.notEqual(assignments[0].senderEmail, assignments[0].recipientEmail);
   assert.equal(assignments[0].shuffleCount, 1568);
+  assert.match(assignments[0].accessToken, /^[a-f0-9]{48}$/);
 });
 
 test('resolveCampaignConfig は締切の90分後を既定の送信開始日時にする', function () {
@@ -175,17 +177,21 @@ test('buildEmailPayload は送信日を本文に反映する', function () {
     senderMessages: [{ id: 1, message: '起きて' }],
     senderMessageCount: 1,
     recipientEmail: 'bob@example.com',
-    recipientName: 'Bob'
+    recipientName: 'Bob',
+    accessToken: 'abc123token'
   }, {
     fromEmail: 'hello@example.com',
     replyToEmail: 'reply@example.com',
-    sendDate: new Date('2026-03-13T10:00:00.000Z')
+    sendDate: new Date('2026-03-13T10:00:00.000Z'),
+    baseUrl: 'https://mezame.example.com/'
   });
 
   assert.equal(payload.from, 'hello@example.com');
   assert.equal(payload.reply_to, 'reply@example.com');
   assert.match(payload.text, /2026年3月13日/);
   assert.match(payload.html, /2026年3月13日/);
+  assert.match(payload.text, /https:\/\/mezame\.example\.com\/message\.html\?token=abc123token/);
+  assert.doesNotMatch(payload.text, /起きて/);
 });
 
 test('send-random-messages は送信日前なら 409 を返す', async function () {
@@ -204,6 +210,7 @@ test('send-random-messages は送信日前なら 409 を返す', async function 
         RANDOM_MESSAGE_SEND_DELAY_MINUTES: '90',
         RESEND_API_KEY: 're_test',
         RESEND_FROM_EMAIL: 'hello@example.com',
+        PUBLIC_SITE_URL: 'https://mezame.example.com',
         SUPABASE_URL: 'https://project.supabase.co',
         SUPABASE_SERVICE_ROLE_KEY: 'service-role-key'
       },
@@ -238,6 +245,7 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
         RESEND_API_KEY: 're_test',
         RESEND_FROM_EMAIL: 'hello@example.com',
         RESEND_REPLY_TO_EMAIL: 'reply@example.com',
+        PUBLIC_SITE_URL: 'https://mezame.example.com',
         SUPABASE_URL: 'https://project.supabase.co',
         SUPABASE_SERVICE_ROLE_KEY: 'service-role-key'
       },
@@ -272,6 +280,7 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
                   sender_message_count: 1,
                   recipient_email: 'bob@example.com',
                   recipient_name: 'Bob',
+                  access_token: 'token-alice',
                   shuffle_count: 1,
                   status: 'planned'
                 },
@@ -284,6 +293,7 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
                   sender_message_count: 1,
                   recipient_email: 'alice@example.com',
                   recipient_name: 'Alice',
+                  access_token: 'token-bob',
                   shuffle_count: 1,
                   status: 'planned'
                 }
@@ -340,7 +350,8 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
                     sender_messages: [{ id: 1, message: 'A' }],
                     sender_message_count: 1,
                     recipient_email: 'bob@example.com',
-                    recipient_name: 'Bob'
+                    recipient_name: 'Bob',
+                    access_token: 'token-alice'
                   }
                 ];
               }
@@ -369,7 +380,8 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
                     sender_messages: [{ id: 2, message: 'B' }],
                     sender_message_count: 1,
                     recipient_email: 'alice@example.com',
-                    recipient_name: 'Alice'
+                    recipient_name: 'Alice',
+                    access_token: 'token-bob'
                   }
                 ];
               }
@@ -406,4 +418,13 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
   assert.equal(result.body.summary.assignmentCount, 2);
   assert.equal(result.body.summary.planCreated, true);
   assert.equal(sendCount, 2);
+  assert.ok(fetchCalls.some(function (entry) {
+    return /message_delivery_assignments$/.test(entry.url)
+      && entry.options.method === 'POST'
+      && /access_token/.test(entry.options.body);
+  }));
+  assert.ok(fetchCalls.some(function (entry) {
+    return entry.url === 'https://api.resend.com/emails'
+      && /message\.html\?token=token-alice/.test(entry.options.body);
+  }));
 });

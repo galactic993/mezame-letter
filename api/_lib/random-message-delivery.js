@@ -1,5 +1,7 @@
 'use strict';
 
+var crypto = require('node:crypto');
+
 var DEFAULT_CAMPAIGN_KEY = '2026-03-13';
 var DEFAULT_ACCEPTANCE_DEADLINE_JST = '2026-03-11T23:59:59.999+09:00';
 var DEFAULT_SEND_DATE_JST = '2026-03-13T00:00:00+09:00';
@@ -122,7 +124,8 @@ function createAssignments(participants, options) {
       senderMessageCount: participants[index].submissions.length,
       recipientEmail: recipients[index].email,
       recipientName: recipients[index].name,
-      shuffleCount: shuffleCount
+      shuffleCount: shuffleCount,
+      accessToken: createAccessToken()
     });
   }
 
@@ -157,6 +160,30 @@ function formatMessageListText(messages) {
   }).join('\n\n');
 }
 
+function resolveBaseUrl(value) {
+  var normalized = normalizeString(value);
+
+  if (!normalized) {
+    return '';
+  }
+
+  return normalized.replace(/\/+$/, '');
+}
+
+function createAccessToken() {
+  return crypto.randomBytes(24).toString('hex');
+}
+
+function buildAccessUrl(token, config) {
+  var baseUrl = resolveBaseUrl(config.baseUrl);
+
+  if (!baseUrl) {
+    throw new Error('PUBLIC_SITE_URL が設定されていません。');
+  }
+
+  return baseUrl + '/message.html?token=' + encodeURIComponent(token);
+}
+
 function formatJstDateLabel(date) {
   return new Intl.DateTimeFormat('ja-JP', {
     timeZone: 'Asia/Tokyo',
@@ -172,28 +199,33 @@ function buildEmailPayload(assignment, config) {
   var sendDate = config.sendDate instanceof Date ? config.sendDate : parseDateOrThrow(config.sendDate, 'sendDate');
   var senderName = normalizeString(assignment.senderName) || '目醒め人';
   var sendDateLabel = formatJstDateLabel(sendDate);
+  var accessUrl = buildAccessUrl(assignment.accessToken, {
+    baseUrl: config.baseUrl
+  });
   var messageCountLabel = assignment.senderMessageCount > 1
     ? senderName + ' さんから届いた ' + assignment.senderMessageCount + ' 通のメッセージ'
     : senderName + ' さんから届いたメッセージ';
   var textBody = [
     assignment.recipientName + ' さんへ',
     '',
-    sendDateLabel + 'の目醒めレターです。',
-    messageCountLabel + ' をお届けします。',
+    sendDateLabel + 'の目醒めレターが届いています。',
+    messageCountLabel + ' は、下の専用ページから受け取れます。',
     '',
-    formatMessageListText(assignment.senderMessages),
+    accessUrl,
     '',
-    'このメールは目醒めレター企画のランダム送信でお届けしています。'
+    'このURLはあなた専用です。このメールは目醒めレター企画のランダム送信でお届けしています。'
   ].join('\n');
 
   var htmlBody = [
     '<div style="font-family:\'Noto Sans JP\',\'Hiragino Sans\',sans-serif;background:#0a0a2e;padding:32px 16px;color:#e8e0d8;">',
     '<div style="max-width:640px;margin:0 auto;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:32px 24px;">',
     '<p style="margin:0 0 12px;font-size:14px;letter-spacing:0.08em;color:#d4a574;">MEZAME LETTER</p>',
-    '<h1 style="margin:0 0 16px;font-family:\'Noto Serif JP\',serif;font-size:28px;line-height:1.4;color:#f8f1ea;">' + escapeHtml(messageCountLabel) + '</h1>',
-    '<p style="margin:0 0 24px;line-height:1.9;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>' + escapeHtml(sendDateLabel) + 'に循環する、目醒めのメッセージをお届けします。</p>',
-    formatMessageListHtml(assignment.senderMessages),
-    '<p style="margin:24px 0 0;font-size:13px;line-height:1.8;color:#bfb4aa;">このメールは目醒めレター企画のランダム送信で自動配信されています。</p>',
+    '<h1 style="margin:0 0 16px;font-family:\'Noto Serif JP\',serif;font-size:28px;line-height:1.4;color:#f8f1ea;">あなた宛ての目醒めレターが届いています</h1>',
+    '<p style="margin:0 0 24px;line-height:1.9;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>' + escapeHtml(sendDateLabel) + 'に循環する ' + escapeHtml(messageCountLabel) + ' は、専用ページで開封できます。</p>',
+    '<p style="margin:0 0 24px;"><a href="' + escapeHtml(accessUrl) + '" style="display:inline-block;padding:14px 22px;border-radius:999px;background:#d4a574;color:#171127;text-decoration:none;font-weight:700;">メッセージをひらく</a></p>',
+    '<p style="margin:0 0 16px;font-size:14px;line-height:1.8;color:#d9d0c6;">ボタンが開けない場合は、こちらのURLをブラウザに貼り付けてください。</p>',
+    '<p style="margin:0 0 24px;font-size:13px;line-height:1.8;word-break:break-all;color:#f3eadf;">' + escapeHtml(accessUrl) + '</p>',
+    '<p style="margin:24px 0 0;font-size:13px;line-height:1.8;color:#bfb4aa;">このURLは受信者ごとに個別発行されています。</p>',
     '</div>',
     '</div>'
   ].join('');
@@ -257,6 +289,7 @@ function resolveCampaignConfig(env) {
     resendApiKey: normalizeString(runtimeEnv.RESEND_API_KEY),
     resendFromEmail: normalizeString(runtimeEnv.RESEND_FROM_EMAIL),
     resendReplyToEmail: normalizeString(runtimeEnv.RESEND_REPLY_TO_EMAIL),
+    publicSiteUrl: resolveBaseUrl(runtimeEnv.PUBLIC_SITE_URL || runtimeEnv.SITE_URL || runtimeEnv.APP_BASE_URL),
     cronSecret: normalizeString(runtimeEnv.CRON_SECRET),
     supabaseUrl: normalizeString(runtimeEnv.SUPABASE_URL),
     supabaseServiceRoleKey: normalizeString(runtimeEnv.SUPABASE_SERVICE_ROLE_KEY),
@@ -277,6 +310,9 @@ function assertRequiredConfig(config) {
   }
   if (!config.cronSecret) {
     missing.push('CRON_SECRET');
+  }
+  if (!config.publicSiteUrl) {
+    missing.push('PUBLIC_SITE_URL');
   }
   if (!config.supabaseUrl) {
     missing.push('SUPABASE_URL');
@@ -303,6 +339,7 @@ module.exports = {
   DEFAULT_SEND_DATE_JST: DEFAULT_SEND_DATE_JST,
   DEFAULT_SHUFFLE_COUNT: DEFAULT_SHUFFLE_COUNT,
   assertRequiredConfig: assertRequiredConfig,
+  buildAccessUrl: buildAccessUrl,
   buildEmailPayload: buildEmailPayload,
   buildParticipantGroups: buildParticipantGroups,
   createAssignments: createAssignments,

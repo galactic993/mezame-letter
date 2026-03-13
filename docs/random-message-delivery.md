@@ -1,7 +1,7 @@
 # ランダムメッセージ送信運用ガイド
 
 ## 1. 目的
-`public.form_submissions` に保存された投稿を対象に、締切の 90 分後以降に 1 回だけランダム割り当てして Resend で配信する。
+`public.form_submissions` に保存された投稿を対象に、締切の 90 分後以降に 1 回だけランダム割り当てし、受信者ごとの専用URLを Resend で配信する。
 
 ## 2. 実装構成
 - API: `api/send-random-messages.js`
@@ -10,8 +10,14 @@
   - 締切日時以前の投稿だけを取得
   - 同一メールアドレスの投稿を 1 送信者グループに束ねる
   - 元データから独立に 1568 回 Sattolo shuffle を実行し、自己配送なしの組み合わせを作る
-  - 配信割り当てを `public.message_delivery_assignments` に永続化
+  - 配信割り当てと受信者専用 `access_token` を `public.message_delivery_assignments` に永続化
   - 未送信または失敗分だけ Resend で再送
+- API: `api/message-view.js`
+  - `GET /api/message-view?token=...` で専用URLの内容を返す
+  - 開封時に `opened_at` / `view_count` を更新する
+- フロントエンド: `message.html`
+  - メールから遷移した専用ページ
+  - アニメーション演出のあとにメッセージ本文を表示する
 - DB: `supabase/migrations/20260308113000_create_message_delivery_assignments_table.sql`
   - 送信者と受信者の対応表
   - `campaign_key + sender_email` / `campaign_key + recipient_email` を一意制約で保護
@@ -37,6 +43,9 @@
   - 例: `目醒めレター <mezame-letter@christmas-planet.co.jp>`
 - `RESEND_REPLY_TO_EMAIL`
   - 任意
+- `PUBLIC_SITE_URL`
+  - 受信者向けURLを組み立てるための公開ベースURL
+  - 例: `https://christmas-planet.co.jp`
 - `RANDOM_MESSAGE_CAMPAIGN_KEY`
   - 任意。既定値は `2026-03-13`
 - `RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST`
@@ -69,14 +78,16 @@ supabase db push
 2. メールアドレス単位で投稿を束ねる
 3. 参加者一覧を元に、1568 回独立に shuffle した最後の結果を採用する
 4. 作成した割り当てを `message_delivery_assignments` に保存する
-5. `planned` / `failed` のレコードを `processing` に claim してから Resend 送信する
-6. 成功時は `sent`、失敗時は `failed` に更新する
+5. `planned` / `failed` のレコードを `processing` に claim してから、専用URLを含むメールを Resend 送信する
+6. 受信者が専用URLを開くと `message.html` が `api/message-view` から本文を取得して表示する
+7. 成功時は `sent`、失敗時は `failed` に更新する
 
 ## 6. 今回の設定例
 1. Xserver で `mezame-letter@christmas-planet.co.jp` を作成する
 2. Resend で `christmas-planet.co.jp` を検証し、`RESEND_FROM_EMAIL` を `目醒めレター <mezame-letter@christmas-planet.co.jp>` にする
 3. 投稿締切を 2026-03-13 17:30 JST にしたい場合は `RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST=2026-03-13T17:30:00+09:00` を設定する
-4. 90 分後の 2026-03-13 19:00 JST 以降に、Cron が自動で一括送信する
+4. `PUBLIC_SITE_URL=https://christmas-planet.co.jp` を設定する
+5. 90 分後の 2026-03-13 19:00 JST 以降に、Cron が専用URLつきメールを自動で一括送信する
 ## 7. 運用確認クエリ
 ```sql
 select
