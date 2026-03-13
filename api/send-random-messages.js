@@ -9,13 +9,6 @@ function writeJson(res, statusCode, body) {
   res.end(JSON.stringify(body));
 }
 
-function createConfigError(message) {
-  var error = new Error(message);
-  error.statusCode = 500;
-  error.type = 'CONFIG_ERROR';
-  return error;
-}
-
 function createRequestError(statusCode, message, type) {
   var error = new Error(message);
   error.statusCode = statusCode;
@@ -78,7 +71,7 @@ async function fetchEligibleSubmissions(config) {
 
 async function fetchAssignments(config) {
   var query = [
-    'select=id,campaign_key,sender_email,sender_name,sender_messages,sender_message_count,recipient_email,recipient_name,shuffle_count,access_token,status,resend_email_id,sent_at,last_error',
+    'select=id,campaign_key,sender_email,sender_name,sender_messages,sender_message_count,recipient_email,recipient_name,shuffle_count,access_token,status,email_subject,email_html,email_text,draft_created_at,resend_email_id,sent_at,last_error',
     'campaign_key=eq.' + encodeURIComponent(config.campaignKey),
     'order=id.asc'
   ].join('&');
@@ -86,8 +79,28 @@ async function fetchAssignments(config) {
   return supabaseRequest(config, config.assignmentsTable + '?' + query);
 }
 
+function buildDraftFields(config, assignment) {
+  var content = deliveryLib.buildEmailContent({
+    senderName: assignment.senderName || assignment.sender_name,
+    senderMessageCount: assignment.senderMessageCount || assignment.sender_message_count,
+    recipientName: assignment.recipientName || assignment.recipient_name,
+    accessToken: assignment.accessToken || assignment.access_token
+  }, {
+    sendDate: config.sendDate,
+    baseUrl: config.publicSiteUrl
+  });
+
+  return {
+    email_subject: content.subject,
+    email_html: content.html,
+    email_text: content.text
+  };
+}
+
 async function insertAssignments(config, assignments) {
+  var now = new Date().toISOString();
   var rows = assignments.map(function (assignment) {
+    var draft = buildDraftFields(config, assignment);
     return {
       campaign_key: config.campaignKey,
       sender_email: assignment.senderEmail,
@@ -98,7 +111,11 @@ async function insertAssignments(config, assignments) {
       recipient_name: assignment.recipientName,
       shuffle_count: assignment.shuffleCount,
       access_token: assignment.accessToken,
-      status: 'planned'
+      status: 'draft',
+      email_subject: draft.email_subject,
+      email_html: draft.email_html,
+      email_text: draft.email_text,
+      draft_created_at: now
     };
   });
 
@@ -111,37 +128,33 @@ async function insertAssignments(config, assignments) {
   });
 }
 
-async function claimAssignment(config, assignmentId) {
-  var query = [
-    'id=eq.' + encodeURIComponent(String(assignmentId)),
-    'status=in.(planned,failed)'
-  ].join('&');
+function needsDraftRefresh(assignment) {
+  if (!assignment || assignment.status === 'sent' || assignment.status === 'processing') {
+    return false;
+  }
 
-  var rows = await supabaseRequest(config, config.assignmentsTable + '?' + query, {
-    method: 'PATCH',
-    headers: {
-      Prefer: 'return=representation'
-    },
-    body: {
-      status: 'processing',
-      last_error: null,
-      delivery_started_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  });
+  if (assignment.status === 'planned') {
+    return true;
+  }
 
-  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  return !assignment.email_subject || !assignment.email_html || !assignment.email_text;
 }
 
-async function markAssignmentSent(config, assignmentId, resendEmailId) {
-  var query = 'id=eq.' + encodeURIComponent(String(assignmentId));
+async function updateAssignmentDraft(config, assignment) {
+  var query = 'id=eq.' + encodeURIComponent(String(assignment.id));
+  var draft = buildDraftFields(config, assignment);
+  var nextStatus = assignment.status === 'planned' ? 'draft' : assignment.status;
   var body = {
-    status: 'sent',
-    resend_email_id: resendEmailId || null,
-    sent_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    last_error: null
+    email_subject: draft.email_subject,
+    email_html: draft.email_html,
+    email_text: draft.email_text,
+    draft_created_at: assignment.draft_created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString()
   };
+
+  if (nextStatus) {
+    body.status = nextStatus;
+  }
 
   await supabaseRequest(config, config.assignmentsTable + '?' + query, {
     method: 'PATCH',
@@ -150,54 +163,6 @@ async function markAssignmentSent(config, assignmentId, resendEmailId) {
     },
     body: body
   });
-}
-
-async function markAssignmentFailed(config, assignmentId, errorMessage) {
-  var query = 'id=eq.' + encodeURIComponent(String(assignmentId));
-  await supabaseRequest(config, config.assignmentsTable + '?' + query, {
-    method: 'PATCH',
-    headers: {
-      Prefer: 'return=minimal'
-    },
-    body: {
-      status: 'failed',
-      last_error: String(errorMessage || '').slice(0, 2000),
-      updated_at: new Date().toISOString()
-    }
-  });
-}
-
-async function sendViaResend(config, assignment) {
-  var response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: 'Bearer ' + config.resendApiKey,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(deliveryLib.buildEmailPayload(assignment, {
-      fromEmail: config.resendFromEmail,
-      replyToEmail: config.resendReplyToEmail,
-      sendDate: config.sendDate,
-      baseUrl: config.publicSiteUrl
-    }))
-  });
-
-  if (!response.ok) {
-    var details = '';
-    try {
-      details = await response.text();
-    } catch (_) {
-      details = '';
-    }
-
-    var error = new Error('Resend 送信に失敗しました。' + (details ? ' ' + details : ''));
-    error.statusCode = response.status >= 500 ? 502 : 500;
-    error.type = 'RESEND_ERROR';
-    error.upstreamStatus = response.status;
-    throw error;
-  }
-
-  return response.json();
 }
 
 function resolveNow(req) {
@@ -217,30 +182,30 @@ function authorizeRequest(req, config) {
   }
 }
 
-function summarize(assignments, sendResults, planCreated) {
+function summarize(assignments, planCreated, draftRefreshed) {
   var summary = {
     campaignKey: assignments[0] ? assignments[0].campaign_key : null,
     assignmentCount: assignments.length,
+    draftCount: 0,
+    processingCount: 0,
     sentCount: 0,
     failedCount: 0,
-    planCreated: Boolean(planCreated)
+    planCreated: Boolean(planCreated),
+    draftRefreshedCount: draftRefreshed
   };
   var index;
 
   for (index = 0; index < assignments.length; index += 1) {
+    if (assignments[index].status === 'draft' || assignments[index].status === 'planned') {
+      summary.draftCount += 1;
+    }
+    if (assignments[index].status === 'processing') {
+      summary.processingCount += 1;
+    }
     if (assignments[index].status === 'sent') {
       summary.sentCount += 1;
     }
     if (assignments[index].status === 'failed') {
-      summary.failedCount += 1;
-    }
-  }
-
-  for (index = 0; index < sendResults.length; index += 1) {
-    if (sendResults[index].status === 'sent') {
-      summary.sentCount += 1;
-    }
-    if (sendResults[index].status === 'failed') {
       summary.failedCount += 1;
     }
   }
@@ -260,7 +225,7 @@ module.exports = async function handler(req, res) {
 
   try {
     var config = deliveryLib.resolveCampaignConfig(process.env);
-    deliveryLib.assertRequiredConfig(config);
+    deliveryLib.assertDraftConfig(config);
     authorizeRequest(req, config);
 
     var now = resolveNow(req);
@@ -268,11 +233,11 @@ module.exports = async function handler(req, res) {
       throw createRequestError(400, '現在時刻ヘッダーが不正です。', 'VALIDATION_ERROR');
     }
 
-    if (now.getTime() < config.sendDate.getTime()) {
+    if (now.getTime() < config.acceptanceDeadline.getTime()) {
       writeJson(res, 409, {
         ok: false,
-        message: '送信開始日時前のため実行できません。',
-        sendDate: config.sendDate.toISOString()
+        message: '投稿締切前のため下書きを作成できません。',
+        acceptanceDeadline: config.acceptanceDeadline.toISOString()
       });
       return;
     }
@@ -287,7 +252,7 @@ module.exports = async function handler(req, res) {
       if (participants.length < 2) {
         writeJson(res, 409, {
           ok: false,
-          message: '一意なメールアドレスが2件未満のため送信できません。',
+          message: '一意なメールアドレスが2件未満のため下書きを作成できません。',
           participantCount: participants.length
         });
         return;
@@ -312,49 +277,26 @@ module.exports = async function handler(req, res) {
       assignments = await fetchAssignments(config);
     }
 
-    var sendResults = [];
+    var draftRefreshedCount = 0;
     var index;
 
     for (index = 0; index < assignments.length; index += 1) {
-      if (assignments[index].status === 'sent') {
+      if (!needsDraftRefresh(assignments[index])) {
         continue;
       }
 
-      var claimed = await claimAssignment(config, assignments[index].id);
-      if (!claimed) {
-        continue;
-      }
+      await updateAssignmentDraft(config, assignments[index]);
+      draftRefreshedCount += 1;
+    }
 
-      try {
-        var resendResponse = await sendViaResend(config, {
-          senderName: claimed.sender_name,
-          senderMessages: claimed.sender_messages,
-          senderMessageCount: claimed.sender_message_count,
-          recipientEmail: claimed.recipient_email,
-          recipientName: claimed.recipient_name,
-          accessToken: claimed.access_token
-        });
-
-        await markAssignmentSent(config, claimed.id, resendResponse && resendResponse.id);
-        sendResults.push({
-          id: claimed.id,
-          status: 'sent'
-        });
-      } catch (sendError) {
-        await markAssignmentFailed(config, claimed.id, sendError.message);
-        sendResults.push({
-          id: claimed.id,
-          status: 'failed',
-          message: sendError.message
-        });
-      }
+    if (draftRefreshedCount > 0) {
+      assignments = await fetchAssignments(config);
     }
 
     writeJson(res, 200, {
       ok: true,
-      message: 'ランダム送信処理を実行しました。',
-      summary: summarize(assignments, sendResults, planCreated),
-      results: sendResults
+      message: 'ランダム送信の下書きを準備しました。',
+      summary: summarize(assignments, planCreated, draftRefreshedCount)
     });
   } catch (err) {
     console.error('[api/send-random-messages] failed', {

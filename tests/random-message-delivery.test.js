@@ -4,7 +4,8 @@ var test = require('node:test');
 var assert = require('node:assert/strict');
 
 var deliveryLib = require('../api/_lib/random-message-delivery');
-var handler = require('../api/send-random-messages');
+var draftHandler = require('../api/send-random-messages');
+var dispatchHandler = require('../api/send-random-message-drafts');
 
 var TRACKED_ENV_KEYS = [
   'CRON_SECRET',
@@ -73,12 +74,13 @@ function setTrackedEnv(overrides) {
   return snapshot;
 }
 
-async function invokeHandler(request, options) {
+async function invokeHandler(handler, request, options) {
   var opts = options || {};
   var req = {
     method: request.method || 'GET',
     headers: request.headers || {},
-    body: request.body
+    body: request.body,
+    query: request.query || {}
   };
   var res = createResponseRecorder();
   var envSnapshot = setTrackedEnv(opts.env);
@@ -171,12 +173,21 @@ test('resolveCampaignConfig は締切の90分後を既定の送信開始日時�
   assert.equal(config.sendDelayMinutes, 90);
 });
 
-test('buildEmailPayload は送信日を本文に反映する', function () {
-  var payload = deliveryLib.buildEmailPayload({
+test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる', function () {
+  var content = deliveryLib.buildEmailContent({
     senderName: 'Alice',
-    senderMessages: [{ id: 1, message: '起きて' }],
     senderMessageCount: 1,
+    recipientName: 'Bob',
+    accessToken: 'abc123token'
+  }, {
+    sendDate: new Date('2026-03-13T10:00:00.000Z'),
+    baseUrl: 'https://mezame.example.com/'
+  });
+
+  var payload = deliveryLib.buildEmailPayload({
     recipientEmail: 'bob@example.com',
+    senderName: 'Alice',
+    senderMessageCount: 1,
     recipientName: 'Bob',
     accessToken: 'abc123token'
   }, {
@@ -186,16 +197,19 @@ test('buildEmailPayload は送信日を本文に反映する', function () {
     baseUrl: 'https://mezame.example.com/'
   });
 
+  assert.equal(content.subject, '【目醒めレター】あなたへ届いたメッセージ');
+  assert.match(content.text, /2026年3月13日/);
+  assert.match(content.html, /message\.html\?token=abc123token/);
   assert.equal(payload.from, 'hello@example.com');
   assert.equal(payload.reply_to, 'reply@example.com');
-  assert.match(payload.text, /2026年3月13日/);
-  assert.match(payload.html, /2026年3月13日/);
-  assert.match(payload.text, /https:\/\/mezame\.example\.com\/message\.html\?token=abc123token/);
-  assert.doesNotMatch(payload.text, /起きて/);
+  assert.equal(payload.subject, content.subject);
+  assert.equal(payload.html, content.html);
+  assert.equal(payload.text, content.text);
 });
 
-test('send-random-messages は送信日前なら 409 を返す', async function () {
+test('send-random-messages は投稿締切前なら 409 を返す', async function () {
   var result = await invokeHandler(
+    draftHandler,
     {
       method: 'GET',
       headers: {
@@ -208,8 +222,6 @@ test('send-random-messages は送信日前なら 409 を返す', async function 
         CRON_SECRET: 'top-secret',
         RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST: '2026-03-12T22:30:00.000+09:00',
         RANDOM_MESSAGE_SEND_DELAY_MINUTES: '90',
-        RESEND_API_KEY: 're_test',
-        RESEND_FROM_EMAIL: 'hello@example.com',
         PUBLIC_SITE_URL: 'https://mezame.example.com',
         SUPABASE_URL: 'https://project.supabase.co',
         SUPABASE_SERVICE_ROLE_KEY: 'service-role-key'
@@ -224,11 +236,11 @@ test('send-random-messages は送信日前なら 409 を返す', async function 
   assert.equal(result.body.ok, false);
 });
 
-test('send-random-messages は未作成の割り当てを生成して送信済みに更新する', async function () {
+test('send-random-messages は未作成の割り当てを生成して下書きを保存する', async function () {
   var fetchCalls = [];
-  var sendCount = 0;
 
   var result = await invokeHandler(
+    draftHandler,
     {
       method: 'POST',
       headers: {
@@ -242,9 +254,6 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
         RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST: '2026-03-11T23:59:59.999+09:00',
         RANDOM_MESSAGE_SEND_DELAY_MINUTES: '90',
         RANDOM_MESSAGE_SHUFFLE_COUNT: '1',
-        RESEND_API_KEY: 're_test',
-        RESEND_FROM_EMAIL: 'hello@example.com',
-        RESEND_REPLY_TO_EMAIL: 'reply@example.com',
         PUBLIC_SITE_URL: 'https://mezame.example.com',
         SUPABASE_URL: 'https://project.supabase.co',
         SUPABASE_SERVICE_ROLE_KEY: 'service-role-key'
@@ -282,7 +291,10 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
                   recipient_name: 'Bob',
                   access_token: 'token-alice',
                   shuffle_count: 1,
-                  status: 'planned'
+                  status: 'draft',
+                  email_subject: '【目醒めレター】あなたへ届いたメッセージ',
+                  email_html: '<p>html</p>',
+                  email_text: 'text'
                 },
                 {
                   id: 12,
@@ -295,7 +307,10 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
                   recipient_name: 'Alice',
                   access_token: 'token-bob',
                   shuffle_count: 1,
-                  status: 'planned'
+                  status: 'draft',
+                  email_subject: '【目醒めレター】あなたへ届いたメッセージ',
+                  email_html: '<p>html</p>',
+                  email_text: 'text'
                 }
               ];
             }
@@ -337,6 +352,188 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
           };
         }
 
+        if (url === 'https://api.resend.com/emails') {
+          throw new Error('Resend should not be called while drafting');
+        }
+
+        throw new Error('Unexpected fetch call: ' + options.method + ' ' + url);
+      }
+    }
+  );
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.body.ok, true);
+  assert.equal(result.body.summary.assignmentCount, 2);
+  assert.equal(result.body.summary.planCreated, true);
+  assert.equal(result.body.summary.draftCount, 2);
+  assert.ok(fetchCalls.some(function (entry) {
+    return /message_delivery_assignments$/.test(entry.url)
+      && entry.options.method === 'POST'
+      && /"status":"draft"/.test(entry.options.body)
+      && /"email_subject":"【目醒めレター】あなたへ届いたメッセージ"/.test(entry.options.body)
+      && /message\.html\?token=[a-f0-9]{48}/.test(entry.options.body);
+  }));
+});
+
+test('send-random-messages は legacy planned レコードの下書きを補完する', async function () {
+  var fetchCalls = [];
+
+  var result = await invokeHandler(
+    draftHandler,
+    {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer top-secret',
+        'x-force-now': '2026-03-13T09:30:00.000+09:00'
+      }
+    },
+    {
+      env: {
+        CRON_SECRET: 'top-secret',
+        RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST: '2026-03-11T23:59:59.999+09:00',
+        RANDOM_MESSAGE_SEND_DELAY_MINUTES: '90',
+        RANDOM_MESSAGE_SHUFFLE_COUNT: '1',
+        PUBLIC_SITE_URL: 'https://mezame.example.com',
+        SUPABASE_URL: 'https://project.supabase.co',
+        SUPABASE_SERVICE_ROLE_KEY: 'service-role-key'
+      },
+      muteConsoleError: true,
+      fetchImpl: async function (url, options) {
+        fetchCalls.push({ url: url, options: options });
+
+        if (/message_delivery_assignments\?/.test(url) && options.method === 'GET') {
+          if (fetchCalls.filter(function (entry) {
+            return /message_delivery_assignments\?/.test(entry.url) && entry.options.method === 'GET';
+          }).length === 1) {
+            return {
+              ok: true,
+              status: 200,
+              json: async function () {
+                return [
+                  {
+                    id: 11,
+                    campaign_key: '2026-03-13',
+                    sender_name: 'Alice',
+                    sender_message_count: 1,
+                    recipient_name: 'Bob',
+                    access_token: 'token-alice',
+                    status: 'planned',
+                    email_subject: null,
+                    email_html: null,
+                    email_text: null,
+                    draft_created_at: null
+                  }
+                ];
+              }
+            };
+          }
+
+          return {
+            ok: true,
+            status: 200,
+            json: async function () {
+              return [
+                {
+                  id: 11,
+                  campaign_key: '2026-03-13',
+                  sender_name: 'Alice',
+                  sender_message_count: 1,
+                  recipient_name: 'Bob',
+                  access_token: 'token-alice',
+                  status: 'draft',
+                  email_subject: '【目醒めレター】あなたへ届いたメッセージ',
+                  email_html: '<p>html</p>',
+                  email_text: 'text',
+                  draft_created_at: '2026-03-13T00:00:00.000Z'
+                }
+              ];
+            }
+          };
+        }
+
+        if (/message_delivery_assignments\?id=eq\.11/.test(url) && options.method === 'PATCH') {
+          return {
+            ok: true,
+            status: 204,
+            json: async function () {
+              return [];
+            }
+          };
+        }
+
+        throw new Error('Unexpected fetch call: ' + options.method + ' ' + url);
+      }
+    }
+  );
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.body.summary.draftRefreshedCount, 1);
+  assert.ok(fetchCalls.some(function (entry) {
+    return /message_delivery_assignments\?id=eq\.11/.test(entry.url)
+      && entry.options.method === 'PATCH'
+      && /"status":"draft"/.test(entry.options.body)
+      && /"email_subject":"【目醒めレター】あなたへ届いたメッセージ"/.test(entry.options.body);
+  }));
+});
+
+test('send-random-message-drafts は保存済み下書きを送信済みに更新する', async function () {
+  var fetchCalls = [];
+  var sendCount = 0;
+
+  var result = await invokeHandler(
+    dispatchHandler,
+    {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer top-secret'
+      }
+    },
+    {
+      env: {
+        CRON_SECRET: 'top-secret',
+        RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST: '2026-03-11T23:59:59.999+09:00',
+        RANDOM_MESSAGE_SEND_DELAY_MINUTES: '90',
+        RANDOM_MESSAGE_SHUFFLE_COUNT: '1',
+        RESEND_API_KEY: 're_test',
+        RESEND_FROM_EMAIL: 'hello@example.com',
+        RESEND_REPLY_TO_EMAIL: 'reply@example.com',
+        PUBLIC_SITE_URL: 'https://mezame.example.com',
+        SUPABASE_URL: 'https://project.supabase.co',
+        SUPABASE_SERVICE_ROLE_KEY: 'service-role-key'
+      },
+      muteConsoleError: true,
+      fetchImpl: async function (url, options) {
+        fetchCalls.push({ url: url, options: options });
+
+        if (/message_delivery_assignments\?/.test(url) && options.method === 'GET') {
+          return {
+            ok: true,
+            status: 200,
+            json: async function () {
+              return [
+                {
+                  id: 11,
+                  campaign_key: '2026-03-13',
+                  recipient_email: 'bob@example.com',
+                  status: 'draft',
+                  email_subject: '件名A',
+                  email_html: '<p>A</p>',
+                  email_text: 'A'
+                },
+                {
+                  id: 12,
+                  campaign_key: '2026-03-13',
+                  recipient_email: 'alice@example.com',
+                  status: 'draft',
+                  email_subject: '件名B',
+                  email_html: '<p>B</p>',
+                  email_text: 'B'
+                }
+              ];
+            }
+          };
+        }
+
         if (/message_delivery_assignments\?id=eq\.11/.test(url) && options.method === 'PATCH') {
           if (options.body.indexOf('"status":"processing"') !== -1) {
             return {
@@ -346,12 +543,10 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
                 return [
                   {
                     id: 11,
-                    sender_name: 'Alice',
-                    sender_messages: [{ id: 1, message: 'A' }],
-                    sender_message_count: 1,
                     recipient_email: 'bob@example.com',
-                    recipient_name: 'Bob',
-                    access_token: 'token-alice'
+                    email_subject: '件名A',
+                    email_html: '<p>A</p>',
+                    email_text: 'A'
                   }
                 ];
               }
@@ -376,12 +571,10 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
                 return [
                   {
                     id: 12,
-                    sender_name: 'Bob',
-                    sender_messages: [{ id: 2, message: 'B' }],
-                    sender_message_count: 1,
                     recipient_email: 'alice@example.com',
-                    recipient_name: 'Alice',
-                    access_token: 'token-bob'
+                    email_subject: '件名B',
+                    email_html: '<p>B</p>',
+                    email_text: 'B'
                   }
                 ];
               }
@@ -416,15 +609,10 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
   assert.equal(result.statusCode, 200);
   assert.equal(result.body.ok, true);
   assert.equal(result.body.summary.assignmentCount, 2);
-  assert.equal(result.body.summary.planCreated, true);
   assert.equal(sendCount, 2);
   assert.ok(fetchCalls.some(function (entry) {
-    return /message_delivery_assignments$/.test(entry.url)
-      && entry.options.method === 'POST'
-      && /access_token/.test(entry.options.body);
-  }));
-  assert.ok(fetchCalls.some(function (entry) {
     return entry.url === 'https://api.resend.com/emails'
-      && /message\.html\?token=token-alice/.test(entry.options.body);
+      && /"subject":"件名A"/.test(entry.options.body)
+      && /"reply_to":"reply@example.com"/.test(entry.options.body);
   }));
 });

@@ -111,7 +111,7 @@ module.exports = async function handler(req, res) {
   try {
     var token = readToken(req);
     var config = deliveryLib.resolveCampaignConfig(process.env);
-    deliveryLib.assertRequiredConfig(config);
+    deliveryLib.assertSupabaseConfig(config);
 
     var assignment = await fetchAssignmentByToken(config, token);
     if (!assignment) {

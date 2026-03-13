@@ -1,17 +1,19 @@
 # ランダムメッセージ送信運用ガイド
 
 ## 1. 目的
-`public.form_submissions` に保存された投稿を対象に、締切の 90 分後以降に 1 回だけランダム割り当てし、受信者ごとの専用URLを Resend で配信する。
+`public.form_submissions` に保存された投稿を対象に、締切後に 1 回だけランダム割り当てし、受信者ごとの専用URLを含むメール下書きを DB に保存する。実際の Resend 送信は別 API で実行する。
 
 ## 2. 実装構成
 - API: `api/send-random-messages.js`
-  - Vercel Cron から `GET /api/send-random-messages` を実行
+  - `GET /api/send-random-messages` または `POST /api/send-random-messages`
   - `CRON_SECRET` による Bearer 認証
-  - 締切日時以前の投稿だけを取得
+  - 締切日時以前の投稿だけを取得し、締切前は下書きを作らない
   - 同一メールアドレスの投稿を 1 送信者グループに束ねる
   - 元データから独立に 1568 回 Sattolo shuffle を実行し、自己配送なしの組み合わせを作る
-  - 配信割り当てと受信者専用 `access_token` を `public.message_delivery_assignments` に永続化
-  - 未送信または失敗分だけ Resend で再送
+  - 配信割り当て、受信者専用 `access_token`、メール件名・本文の下書きを `public.message_delivery_assignments` に永続化
+- API: `api/send-random-message-drafts.js`
+  - `GET /api/send-random-message-drafts` または `POST /api/send-random-message-drafts`
+  - `draft` / `planned` / `failed` のレコードだけを `processing` に claim して Resend 送信する
 - API: `api/message-view.js`
   - `GET /api/message-view?token=...` で専用URLの内容を返す
   - 開封時に `opened_at` / `view_count` を更新する
@@ -21,10 +23,8 @@
 - DB: `supabase/migrations/20260308113000_create_message_delivery_assignments_table.sql`
   - 送信者と受信者の対応表
   - `campaign_key + sender_email` / `campaign_key + recipient_email` を一意制約で保護
-  - `planned / processing / sent / failed` の状態を保持
-- Cron: `vercel.json`
-  - `*/15 * * * *` で 15 分ごとに実行
-  - コード側で `sendDate` 未満は拒否するため、送信開始前に起動しても配信されない
+  - `draft / processing / sent / failed` を中心に状態を保持する
+  - `email_subject` / `email_html` / `email_text` / `draft_created_at` に下書き本文を保存する
 
 ## 3. 必要な環境変数
 - `SUPABASE_URL`
@@ -74,11 +74,11 @@ supabase db push
 6. 送信元メールアドレス `mezame-letter@christmas-planet.co.jp` を Xserver 側で作成する
 
 ## 5. 配信ロジック
-1. `form_submissions` から締切以前の投稿を取得
+1. `form_submissions` から締切以前の投稿を取得する
 2. メールアドレス単位で投稿を束ねる
 3. 参加者一覧を元に、1568 回独立に shuffle した最後の結果を採用する
-4. 作成した割り当てを `message_delivery_assignments` に保存する
-5. `planned` / `failed` のレコードを `processing` に claim してから、専用URLを含むメールを Resend 送信する
+4. 作成した割り当てを `message_delivery_assignments` に保存し、件名・HTML・テキスト本文も下書きとして保存する
+5. 送信タイミングで `api/send-random-message-drafts` を呼び、`draft` / `failed` のレコードを `processing` に claim してから Resend 送信する
 6. 受信者が専用URLを開くと `message.html` が `api/message-view` から本文を取得して表示する
 7. 成功時は `sent`、失敗時は `failed` に更新する
 
@@ -87,7 +87,8 @@ supabase db push
 2. Resend で `christmas-planet.co.jp` を検証し、`RESEND_FROM_EMAIL` を `目醒めレター <mezame-letter@christmas-planet.co.jp>` にする
 3. 投稿締切を 2026-03-13 17:30 JST にしたい場合は `RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST=2026-03-13T17:30:00+09:00` を設定する
 4. `PUBLIC_SITE_URL=https://christmas-planet.co.jp` を設定する
-5. 90 分後の 2026-03-13 19:00 JST 以降に、Cron が専用URLつきメールを自動で一括送信する
+5. 締切後に `POST /api/send-random-messages` を実行して下書きを保存する
+6. 内容確認後、90 分後の 2026-03-13 19:00 JST 以降に `POST /api/send-random-message-drafts` を実行して一括送信する
 ## 7. 運用確認クエリ
 ```sql
 select
@@ -95,6 +96,8 @@ select
   sender_email,
   recipient_email,
   status,
+  email_subject,
+  draft_created_at,
   sent_at,
   last_error
 from public.message_delivery_assignments
@@ -104,4 +107,5 @@ order by id asc;
 ## 8. 注意点
 - 一意なメールアドレスが 2 件未満の場合は配信しない
 - 同一メールアドレスの複数投稿は 1 人分として同じ受信者にまとめて送る
-- `message_delivery_assignments` を作成した後は、そのスナップショットを基準に再送するため、締切後の新規投稿は配信対象に入らない
+- `message_delivery_assignments` を作成した後は、そのスナップショットを基準にするため、締切後の新規投稿は配信対象に入らない
+- `api/send-random-messages` は既存の `planned` レコードを検出すると `draft` へ補完し、下書き本文をバックフィルする

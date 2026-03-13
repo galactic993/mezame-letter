@@ -8,8 +8,6 @@ var handler = require('../api/message-view');
 var TRACKED_ENV_KEYS = [
   'CRON_SECRET',
   'PUBLIC_SITE_URL',
-  'RESEND_API_KEY',
-  'RESEND_FROM_EMAIL',
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
   'SUPABASE_SCHEMA',
@@ -102,8 +100,6 @@ test('message-view は token がないと 400 を返す', async function () {
       env: {
         CRON_SECRET: 'top-secret',
         PUBLIC_SITE_URL: 'https://mezame.example.com',
-        RESEND_API_KEY: 're_test',
-        RESEND_FROM_EMAIL: 'hello@example.com',
         SUPABASE_URL: 'https://project.supabase.co',
         SUPABASE_SERVICE_ROLE_KEY: 'service-role-key'
       }
@@ -128,8 +124,6 @@ test('message-view は token からメッセージを返して開封時刻を更
       env: {
         CRON_SECRET: 'top-secret',
         PUBLIC_SITE_URL: 'https://mezame.example.com',
-        RESEND_API_KEY: 're_test',
-        RESEND_FROM_EMAIL: 'hello@example.com',
         SUPABASE_URL: 'https://project.supabase.co',
         SUPABASE_SERVICE_ROLE_KEY: 'service-role-key'
       },

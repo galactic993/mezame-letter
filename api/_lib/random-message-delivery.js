@@ -193,9 +193,7 @@ function formatJstDateLabel(date) {
   }).format(date);
 }
 
-function buildEmailPayload(assignment, config) {
-  var fromEmail = normalizeString(config.fromEmail);
-  var replyToEmail = normalizeString(config.replyToEmail);
+function buildEmailContent(assignment, config) {
   var sendDate = config.sendDate instanceof Date ? config.sendDate : parseDateOrThrow(config.sendDate, 'sendDate');
   var senderName = normalizeString(assignment.senderName) || '目醒め人';
   var sendDateLabel = formatJstDateLabel(sendDate);
@@ -205,6 +203,7 @@ function buildEmailPayload(assignment, config) {
   var messageCountLabel = assignment.senderMessageCount > 1
     ? senderName + ' さんから届いた ' + assignment.senderMessageCount + ' 通のメッセージ'
     : senderName + ' さんから届いたメッセージ';
+  var subject = '【目醒めレター】あなたへ届いたメッセージ';
   var textBody = [
     assignment.recipientName + ' さんへ',
     '',
@@ -230,12 +229,24 @@ function buildEmailPayload(assignment, config) {
     '</div>'
   ].join('');
 
+  return {
+    subject: subject,
+    html: htmlBody,
+    text: textBody,
+    accessUrl: accessUrl
+  };
+}
+
+function buildEmailPayload(assignment, config) {
+  var fromEmail = normalizeString(config.fromEmail);
+  var replyToEmail = normalizeString(config.replyToEmail);
+  var content = buildEmailContent(assignment, config);
   var payload = {
     from: fromEmail,
     to: [assignment.recipientEmail],
-    subject: '【目醒めレター】あなたへ届いたメッセージ',
-    html: htmlBody,
-    text: textBody
+    subject: content.subject,
+    html: content.html,
+    text: content.text
   };
 
   if (replyToEmail) {
@@ -299,38 +310,120 @@ function resolveCampaignConfig(env) {
   };
 }
 
-function assertRequiredConfig(config) {
-  var missing = [];
+function createConfigAssertion(requiredEntries) {
+  return function assertConfig(config) {
+    var missing = [];
+    var index;
 
-  if (!config.resendApiKey) {
-    missing.push('RESEND_API_KEY');
-  }
-  if (!config.resendFromEmail) {
-    missing.push('RESEND_FROM_EMAIL');
-  }
-  if (!config.cronSecret) {
-    missing.push('CRON_SECRET');
-  }
-  if (!config.publicSiteUrl) {
-    missing.push('PUBLIC_SITE_URL');
-  }
-  if (!config.supabaseUrl) {
-    missing.push('SUPABASE_URL');
-  }
-  if (!config.supabaseServiceRoleKey) {
-    missing.push('SUPABASE_SERVICE_ROLE_KEY');
-  }
-  if (!Number.isInteger(config.shuffleCount) || config.shuffleCount <= 0) {
-    missing.push('RANDOM_MESSAGE_SHUFFLE_COUNT');
-  }
+    for (index = 0; index < requiredEntries.length; index += 1) {
+      if (!requiredEntries[index].isValid(config)) {
+        missing.push(requiredEntries[index].name);
+      }
+    }
 
-  if (missing.length > 0) {
-    var configError = new Error('必要な環境変数が不足しています: ' + missing.join(', '));
-    configError.statusCode = 500;
-    configError.type = 'CONFIG_ERROR';
-    throw configError;
-  }
+    if (missing.length > 0) {
+      var configError = new Error('必要な環境変数が不足しています: ' + missing.join(', '));
+      configError.statusCode = 500;
+      configError.type = 'CONFIG_ERROR';
+      throw configError;
+    }
+  };
 }
+
+var assertSupabaseConfig = createConfigAssertion([
+  {
+    name: 'SUPABASE_URL',
+    isValid: function (config) {
+      return Boolean(config.supabaseUrl);
+    }
+  },
+  {
+    name: 'SUPABASE_SERVICE_ROLE_KEY',
+    isValid: function (config) {
+      return Boolean(config.supabaseServiceRoleKey);
+    }
+  }
+]);
+
+var assertDraftConfig = createConfigAssertion([
+  {
+    name: 'CRON_SECRET',
+    isValid: function (config) {
+      return Boolean(config.cronSecret);
+    }
+  },
+  {
+    name: 'PUBLIC_SITE_URL',
+    isValid: function (config) {
+      return Boolean(config.publicSiteUrl);
+    }
+  },
+  {
+    name: 'RANDOM_MESSAGE_SHUFFLE_COUNT',
+    isValid: function (config) {
+      return Number.isInteger(config.shuffleCount) && config.shuffleCount > 0;
+    }
+  },
+  {
+    name: 'SUPABASE_URL',
+    isValid: function (config) {
+      return Boolean(config.supabaseUrl);
+    }
+  },
+  {
+    name: 'SUPABASE_SERVICE_ROLE_KEY',
+    isValid: function (config) {
+      return Boolean(config.supabaseServiceRoleKey);
+    }
+  }
+]);
+
+var assertDispatchConfig = createConfigAssertion([
+  {
+    name: 'CRON_SECRET',
+    isValid: function (config) {
+      return Boolean(config.cronSecret);
+    }
+  },
+  {
+    name: 'PUBLIC_SITE_URL',
+    isValid: function (config) {
+      return Boolean(config.publicSiteUrl);
+    }
+  },
+  {
+    name: 'RANDOM_MESSAGE_SHUFFLE_COUNT',
+    isValid: function (config) {
+      return Number.isInteger(config.shuffleCount) && config.shuffleCount > 0;
+    }
+  },
+  {
+    name: 'RESEND_API_KEY',
+    isValid: function (config) {
+      return Boolean(config.resendApiKey);
+    }
+  },
+  {
+    name: 'RESEND_FROM_EMAIL',
+    isValid: function (config) {
+      return Boolean(config.resendFromEmail);
+    }
+  },
+  {
+    name: 'SUPABASE_URL',
+    isValid: function (config) {
+      return Boolean(config.supabaseUrl);
+    }
+  },
+  {
+    name: 'SUPABASE_SERVICE_ROLE_KEY',
+    isValid: function (config) {
+      return Boolean(config.supabaseServiceRoleKey);
+    }
+  }
+]);
+
+var assertRequiredConfig = assertDispatchConfig;
 
 module.exports = {
   DEFAULT_ACCEPTANCE_DEADLINE_JST: DEFAULT_ACCEPTANCE_DEADLINE_JST,
@@ -338,7 +431,11 @@ module.exports = {
   DEFAULT_SEND_DELAY_MINUTES: DEFAULT_SEND_DELAY_MINUTES,
   DEFAULT_SEND_DATE_JST: DEFAULT_SEND_DATE_JST,
   DEFAULT_SHUFFLE_COUNT: DEFAULT_SHUFFLE_COUNT,
+  assertDispatchConfig: assertDispatchConfig,
+  assertDraftConfig: assertDraftConfig,
   assertRequiredConfig: assertRequiredConfig,
+  assertSupabaseConfig: assertSupabaseConfig,
+  buildEmailContent: buildEmailContent,
   buildAccessUrl: buildAccessUrl,
   buildEmailPayload: buildEmailPayload,
   buildParticipantGroups: buildParticipantGroups,
