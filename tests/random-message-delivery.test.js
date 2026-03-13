@@ -218,17 +218,17 @@ test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる'
     baseUrl: 'https://mezame.example.com/'
   });
 
-  assert.equal(content.subject, '【目醒めレター】あなたへ届いたメッセージ');
+  assert.equal(content.subject, '【目醒めのギフト交換】あなたへお手紙が届いています');
   assert.match(content.text, /目醒め人から預かったお手紙をお届けします。/);
-  assert.match(content.text, /あなたに届いたメッセージ/);
+  assert.match(content.text, /あなたに届いた手紙/);
   assert.match(content.text, /起きて、光を見て。/);
   assert.match(content.text, /※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。/);
-  assert.match(content.html, /Message/);
+  assert.match(content.html, /Letter/);
   assert.match(content.html, /起きて、光を見て。/);
   assert.match(content.html, /font-size:24px/);
   assert.match(content.html, /あなた宛に、目醒め人からのお手紙が届いています/);
-  assert.match(content.text, /この度はメッセージを送信していただき、ありがとうございました。/);
-  assert.match(content.text, /あなたのメッセージも、目醒め人に大切にお届けいたしました。/);
+  assert.match(content.text, /この度はお手紙を送っていただき、ありがとうございました。/);
+  assert.match(content.text, /あなたのお手紙も、目醒め人に大切にお届けいたしました。/);
   assert.match(content.html, /目醒め人から預かったお手紙をお届けします。/);
   assert.doesNotMatch(content.text, /Alice/);
   assert.doesNotMatch(content.html, /Alice/);
@@ -424,8 +424,8 @@ test('send-random-messages は未作成の割り当てを生成して下書き�
     return /message_delivery_assignments$/.test(entry.url)
       && entry.options.method === 'POST'
       && /"status":"draft"/.test(entry.options.body)
-      && /"email_subject":"【目醒めレター】あなたへ届いたメッセージ"/.test(entry.options.body)
-      && /"email_text":"Bob さんへ\\n\\n目醒め人から預かったお手紙をお届けします。\\n\\n────────────\\nあなたに届いたメッセージ\\n────────────\\n\\nA\\n\\nこの度はメッセージを送信していただき、ありがとうございました。\\nあなたのメッセージも、目醒め人に大切にお届けいたしました。\\n\\n※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。"/.test(entry.options.body)
+      && /"email_subject":"【目醒めのギフト交換】あなたへお手紙が届いています"/.test(entry.options.body)
+      && /"email_text":"Bob さんへ\\n\\n目醒め人から預かったお手紙をお届けします。\\n\\n────────────\\nあなたに届いた手紙\\n────────────\\n\\nA\\n\\nこの度はお手紙を送っていただき、ありがとうございました。\\nあなたのお手紙も、目醒め人に大切にお届けいたしました。\\n\\n※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。"/.test(entry.options.body)
       && /font-size:24px/.test(entry.options.body)
       && !/Alice さんから/.test(entry.options.body);
   }));
@@ -497,7 +497,7 @@ test('send-random-messages は legacy planned レコードの下書きを補完�
                   recipient_name: 'Bob',
                   access_token: 'token-alice',
                   status: 'draft',
-                  email_subject: '【目醒めレター】あなたへ届いたメッセージ',
+                  email_subject: '【目醒めのギフト交換】あなたへお手紙が届いています',
                   email_html: '<p>html</p>',
                   email_text: 'text',
                   draft_created_at: '2026-03-13T00:00:00.000Z'
@@ -528,7 +528,7 @@ test('send-random-messages は legacy planned レコードの下書きを補完�
     return /message_delivery_assignments\?id=eq\.11/.test(entry.url)
       && entry.options.method === 'PATCH'
       && /"status":"draft"/.test(entry.options.body)
-      && /"email_subject":"【目醒めレター】あなたへ届いたメッセージ"/.test(entry.options.body);
+      && /"email_subject":"【目醒めのギフト交換】あなたへお手紙が届いています"/.test(entry.options.body);
   }));
 });
 

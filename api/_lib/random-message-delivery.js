@@ -219,21 +219,21 @@ function buildEmailContent(assignment, config) {
     parseDateOrThrow(config.sendDate, 'sendDate');
   }
   var messageText = getPrimaryMessageText(assignment.senderMessages);
-  var messageHtml = escapeHtml(messageText).replace(/\r?\n/g, '<br>');
-  var subject = '【目醒めレター】あなたへ届いたメッセージ';
+  var letterHtml = escapeHtml(messageText).replace(/\r?\n/g, '<br>');
+  var subject = '【目醒めのギフト交換】あなたへお手紙が届いています';
   var textBody = [
     assignment.recipientName + ' さんへ',
     '',
     '目醒め人から預かったお手紙をお届けします。',
     '',
     '────────────',
-    'あなたに届いたメッセージ',
+    'あなたに届いた手紙',
     '────────────',
     '',
     messageText,
     '',
-    'この度はメッセージを送信していただき、ありがとうございました。',
-    'あなたのメッセージも、目醒め人に大切にお届けいたしました。',
+    'この度はお手紙を送っていただき、ありがとうございました。',
+    'あなたのお手紙も、目醒め人に大切にお届けいたしました。',
     '',
     '※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。'
   ].join('\n');
@@ -245,10 +245,10 @@ function buildEmailContent(assignment, config) {
     '<h1 style="margin:0 0 16px;font-family:\'Noto Serif JP\',serif;font-size:28px;line-height:1.4;color:#f8f1ea;">あなた宛に、目醒め人からのお手紙が届いています</h1>',
     '<p style="margin:0 0 20px;line-height:1.9;color:#ddd4ca;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>目醒め人から預かったお手紙をお届けします。</p>',
     '<section style="margin:0 0 28px;padding:22px 22px 24px;border-radius:22px;background:linear-gradient(180deg, rgba(240,200,127,0.22), rgba(255,255,255,0.08));border:1px solid rgba(240,200,127,0.42);box-shadow:0 18px 42px rgba(0,0,0,0.26);">'
-      + '<p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.14em;color:#f3d8a0;text-transform:uppercase;">Message</p>'
-      + '<div style="padding:20px 22px;border-radius:18px;background:#fff7ed;color:#1f140d;font-family:\'Noto Serif JP\',serif;font-size:24px;line-height:2;letter-spacing:0.03em;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);">' + messageHtml + '</div>'
+      + '<p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.14em;color:#f3d8a0;text-transform:uppercase;">Letter</p>'
+      + '<div style="padding:20px 22px;border-radius:18px;background:#fff7ed;color:#1f140d;font-family:\'Noto Serif JP\',serif;font-size:24px;line-height:2;letter-spacing:0.03em;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);">' + letterHtml + '</div>'
       + '</section>',
-    '<p style="margin:24px 0 0 0;font-size:13px;line-height:1.9;color:#bfb4aa;">この度はメッセージを送信していただき、ありがとうございました。<br>あなたのメッセージも、目醒め人に大切にお届けいたしました。</p>',
+    '<p style="margin:24px 0 0 0;font-size:13px;line-height:1.9;color:#bfb4aa;">この度はお手紙を送っていただき、ありがとうございました。<br>あなたのお手紙も、目醒め人に大切にお届けいたしました。</p>',
     '<p style="margin:16px 0 0 0;font-size:12px;line-height:1.8;color:#9e9389;">※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。</p>',
     '</div>',
     '</div>'
