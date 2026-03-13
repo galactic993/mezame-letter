@@ -10,6 +10,7 @@ var TRACKED_ENV_KEYS = [
   'CRON_SECRET',
   'RANDOM_MESSAGE_SHUFFLE_COUNT',
   'RANDOM_MESSAGE_SEND_DATE_JST',
+  'RANDOM_MESSAGE_SEND_DELAY_MINUTES',
   'RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST',
   'RANDOM_MESSAGE_CAMPAIGN_KEY',
   'RESEND_API_KEY',
@@ -158,6 +159,35 @@ test('createAssignments は自己配送なしで 1568 回シャッフル結果�
   assert.equal(assignments[0].shuffleCount, 1568);
 });
 
+test('resolveCampaignConfig は締切の90分後を既定の送信開始日時にする', function () {
+  var config = deliveryLib.resolveCampaignConfig({
+    RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST: '2026-03-13T17:30:00+09:00',
+    RANDOM_MESSAGE_SEND_DELAY_MINUTES: '90'
+  });
+
+  assert.equal(config.sendDate.toISOString(), '2026-03-13T10:00:00.000Z');
+  assert.equal(config.sendDelayMinutes, 90);
+});
+
+test('buildEmailPayload は送信日を本文に反映する', function () {
+  var payload = deliveryLib.buildEmailPayload({
+    senderName: 'Alice',
+    senderMessages: [{ id: 1, message: '起きて' }],
+    senderMessageCount: 1,
+    recipientEmail: 'bob@example.com',
+    recipientName: 'Bob'
+  }, {
+    fromEmail: 'hello@example.com',
+    replyToEmail: 'reply@example.com',
+    sendDate: new Date('2026-03-13T10:00:00.000Z')
+  });
+
+  assert.equal(payload.from, 'hello@example.com');
+  assert.equal(payload.reply_to, 'reply@example.com');
+  assert.match(payload.text, /2026年3月13日/);
+  assert.match(payload.html, /2026年3月13日/);
+});
+
 test('send-random-messages は送信日前なら 409 を返す', async function () {
   var result = await invokeHandler(
     {
@@ -170,7 +200,8 @@ test('send-random-messages は送信日前なら 409 を返す', async function 
     {
       env: {
         CRON_SECRET: 'top-secret',
-        RANDOM_MESSAGE_SEND_DATE_JST: '2026-03-13T00:00:00.000+09:00',
+        RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST: '2026-03-12T22:30:00.000+09:00',
+        RANDOM_MESSAGE_SEND_DELAY_MINUTES: '90',
         RESEND_API_KEY: 're_test',
         RESEND_FROM_EMAIL: 'hello@example.com',
         SUPABASE_URL: 'https://project.supabase.co',
@@ -201,8 +232,8 @@ test('send-random-messages は未作成の割り当てを生成して送信済�
     {
       env: {
         CRON_SECRET: 'top-secret',
-        RANDOM_MESSAGE_SEND_DATE_JST: '2026-03-13T00:00:00.000+09:00',
         RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST: '2026-03-11T23:59:59.999+09:00',
+        RANDOM_MESSAGE_SEND_DELAY_MINUTES: '90',
         RANDOM_MESSAGE_SHUFFLE_COUNT: '1',
         RESEND_API_KEY: 're_test',
         RESEND_FROM_EMAIL: 'hello@example.com',

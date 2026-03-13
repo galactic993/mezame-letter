@@ -175,7 +175,8 @@ async function sendViaResend(config, assignment) {
     },
     body: JSON.stringify(deliveryLib.buildEmailPayload(assignment, {
       fromEmail: config.resendFromEmail,
-      replyToEmail: config.resendReplyToEmail
+      replyToEmail: config.resendReplyToEmail,
+      sendDate: config.sendDate
     }))
   });
 

@@ -1,7 +1,7 @@
 # ランダムメッセージ送信運用ガイド
 
 ## 1. 目的
-2026-03-11 23:59:59 JST までに `public.form_submissions` に保存された投稿を対象に、2026-03-13 以降に 1 回だけランダム割り当てして Resend で配信する。
+`public.form_submissions` に保存された投稿を対象に、締切の 90 分後以降に 1 回だけランダム割り当てして Resend で配信する。
 
 ## 2. 実装構成
 - API: `api/send-random-messages.js`
@@ -17,8 +17,8 @@
   - `campaign_key + sender_email` / `campaign_key + recipient_email` を一意制約で保護
   - `planned / processing / sent / failed` の状態を保持
 - Cron: `vercel.json`
-  - `0 1 * * *` で毎日 10:00 JST 相当を起点に実行
-  - コード側で `RANDOM_MESSAGE_SEND_DATE_JST` 未満は拒否するため、実際の配信は 2026-03-13 以降のみ
+  - `*/15 * * * *` で 15 分ごとに実行
+  - コード側で `sendDate` 未満は拒否するため、送信開始前に起動しても配信されない
 
 ## 3. 必要な環境変数
 - `SUPABASE_URL`
@@ -34,14 +34,20 @@
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
   - Resend で検証済みドメインの送信元を設定する
+  - 例: `目醒めレター <mezame-letter@christmas-planet.co.jp>`
 - `RESEND_REPLY_TO_EMAIL`
   - 任意
 - `RANDOM_MESSAGE_CAMPAIGN_KEY`
   - 任意。既定値は `2026-03-13`
 - `RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST`
-  - 任意。既定値は `2026-03-11T23:59:59.999+09:00`
+  - 締切日時。ここまでは投稿を受け付ける
+  - 例: `2026-03-13T17:30:00+09:00`
 - `RANDOM_MESSAGE_SEND_DATE_JST`
-  - 任意。既定値は `2026-03-13T00:00:00+09:00`
+  - 任意。明示指定するとこの日時以降に送信する
+- `RANDOM_MESSAGE_SEND_DELAY_MINUTES`
+  - 任意。`RANDOM_MESSAGE_SEND_DATE_JST` 未指定時だけ使用
+  - 既定値は `90`
+  - `RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST + 90分` を送信開始日時として扱う
 - `RANDOM_MESSAGE_SHUFFLE_COUNT`
   - 任意。既定値は `1568`
 
@@ -55,6 +61,8 @@ supabase db push
 2. Vercel に上記環境変数を登録する
 3. Resend 側で `RESEND_FROM_EMAIL` のドメインを verify する
 4. Vercel の Cron で `Authorization` ヘッダーが `Bearer <CRON_SECRET>` になるよう設定する
+5. Xserver の DNS に Resend 指定のレコードを追加して `christmas-planet.co.jp` を検証する
+6. 送信元メールアドレス `mezame-letter@christmas-planet.co.jp` を Xserver 側で作成する
 
 ## 5. 配信ロジック
 1. `form_submissions` から締切以前の投稿を取得
@@ -64,7 +72,12 @@ supabase db push
 5. `planned` / `failed` のレコードを `processing` に claim してから Resend 送信する
 6. 成功時は `sent`、失敗時は `failed` に更新する
 
-## 6. 運用確認クエリ
+## 6. 今回の設定例
+1. Xserver で `mezame-letter@christmas-planet.co.jp` を作成する
+2. Resend で `christmas-planet.co.jp` を検証し、`RESEND_FROM_EMAIL` を `目醒めレター <mezame-letter@christmas-planet.co.jp>` にする
+3. 投稿締切を 2026-03-13 17:30 JST にしたい場合は `RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST=2026-03-13T17:30:00+09:00` を設定する
+4. 90 分後の 2026-03-13 19:00 JST 以降に、Cron が自動で一括送信する
+## 7. 運用確認クエリ
 ```sql
 select
   campaign_key,
@@ -77,7 +90,7 @@ from public.message_delivery_assignments
 order by id asc;
 ```
 
-## 7. 注意点
+## 8. 注意点
 - 一意なメールアドレスが 2 件未満の場合は配信しない
 - 同一メールアドレスの複数投稿は 1 人分として同じ受信者にまとめて送る
 - `message_delivery_assignments` を作成した後は、そのスナップショットを基準に再送するため、締切後の新規投稿は配信対象に入らない

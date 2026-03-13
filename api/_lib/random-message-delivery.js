@@ -3,6 +3,7 @@
 var DEFAULT_CAMPAIGN_KEY = '2026-03-13';
 var DEFAULT_ACCEPTANCE_DEADLINE_JST = '2026-03-11T23:59:59.999+09:00';
 var DEFAULT_SEND_DATE_JST = '2026-03-13T00:00:00+09:00';
+var DEFAULT_SEND_DELAY_MINUTES = 90;
 var DEFAULT_SHUFFLE_COUNT = 1568;
 
 function normalizeString(value) {
@@ -156,17 +157,28 @@ function formatMessageListText(messages) {
   }).join('\n\n');
 }
 
+function formatJstDateLabel(date) {
+  return new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(date);
+}
+
 function buildEmailPayload(assignment, config) {
   var fromEmail = normalizeString(config.fromEmail);
   var replyToEmail = normalizeString(config.replyToEmail);
+  var sendDate = config.sendDate instanceof Date ? config.sendDate : parseDateOrThrow(config.sendDate, 'sendDate');
   var senderName = normalizeString(assignment.senderName) || '目醒め人';
+  var sendDateLabel = formatJstDateLabel(sendDate);
   var messageCountLabel = assignment.senderMessageCount > 1
     ? senderName + ' さんから届いた ' + assignment.senderMessageCount + ' 通のメッセージ'
     : senderName + ' さんから届いたメッセージ';
   var textBody = [
     assignment.recipientName + ' さんへ',
     '',
-    '2026年3月13日の目醒めレターです。',
+    sendDateLabel + 'の目醒めレターです。',
     messageCountLabel + ' をお届けします。',
     '',
     formatMessageListText(assignment.senderMessages),
@@ -179,7 +191,7 @@ function buildEmailPayload(assignment, config) {
     '<div style="max-width:640px;margin:0 auto;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:32px 24px;">',
     '<p style="margin:0 0 12px;font-size:14px;letter-spacing:0.08em;color:#d4a574;">MEZAME LETTER</p>',
     '<h1 style="margin:0 0 16px;font-family:\'Noto Serif JP\',serif;font-size:28px;line-height:1.4;color:#f8f1ea;">' + escapeHtml(messageCountLabel) + '</h1>',
-    '<p style="margin:0 0 24px;line-height:1.9;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>2026年3月13日に循環する、目醒めのメッセージをお届けします。</p>',
+    '<p style="margin:0 0 24px;line-height:1.9;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>' + escapeHtml(sendDateLabel) + 'に循環する、目醒めのメッセージをお届けします。</p>',
     formatMessageListHtml(assignment.senderMessages),
     '<p style="margin:24px 0 0;font-size:13px;line-height:1.8;color:#bfb4aa;">このメールは目醒めレター企画のランダム送信で自動配信されています。</p>',
     '</div>',
@@ -211,20 +223,36 @@ function parseDateOrThrow(value, label) {
   return parsed;
 }
 
+function parsePositiveInteger(value, label) {
+  var parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(label + ' は0以上の整数である必要があります。');
+  }
+
+  return parsed;
+}
+
 function resolveCampaignConfig(env) {
   var runtimeEnv = env || process.env;
   var shuffleCount = runtimeEnv.RANDOM_MESSAGE_SHUFFLE_COUNT || DEFAULT_SHUFFLE_COUNT;
+  var acceptanceDeadline = parseDateOrThrow(
+    runtimeEnv.RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST || DEFAULT_ACCEPTANCE_DEADLINE_JST,
+    'RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST'
+  );
+  var sendDelayMinutes = parsePositiveInteger(
+    runtimeEnv.RANDOM_MESSAGE_SEND_DELAY_MINUTES || DEFAULT_SEND_DELAY_MINUTES,
+    'RANDOM_MESSAGE_SEND_DELAY_MINUTES'
+  );
+  var sendDate = runtimeEnv.RANDOM_MESSAGE_SEND_DATE_JST
+    ? parseDateOrThrow(runtimeEnv.RANDOM_MESSAGE_SEND_DATE_JST, 'RANDOM_MESSAGE_SEND_DATE_JST')
+    : new Date(acceptanceDeadline.getTime() + sendDelayMinutes * 60 * 1000);
 
   return {
     campaignKey: runtimeEnv.RANDOM_MESSAGE_CAMPAIGN_KEY || DEFAULT_CAMPAIGN_KEY,
-    acceptanceDeadline: parseDateOrThrow(
-      runtimeEnv.RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST || DEFAULT_ACCEPTANCE_DEADLINE_JST,
-      'RANDOM_MESSAGE_ACCEPTANCE_DEADLINE_JST'
-    ),
-    sendDate: parseDateOrThrow(
-      runtimeEnv.RANDOM_MESSAGE_SEND_DATE_JST || DEFAULT_SEND_DATE_JST,
-      'RANDOM_MESSAGE_SEND_DATE_JST'
-    ),
+    acceptanceDeadline: acceptanceDeadline,
+    sendDate: sendDate,
+    sendDelayMinutes: sendDelayMinutes,
     shuffleCount: Number(shuffleCount),
     resendApiKey: normalizeString(runtimeEnv.RESEND_API_KEY),
     resendFromEmail: normalizeString(runtimeEnv.RESEND_FROM_EMAIL),
@@ -271,6 +299,7 @@ function assertRequiredConfig(config) {
 module.exports = {
   DEFAULT_ACCEPTANCE_DEADLINE_JST: DEFAULT_ACCEPTANCE_DEADLINE_JST,
   DEFAULT_CAMPAIGN_KEY: DEFAULT_CAMPAIGN_KEY,
+  DEFAULT_SEND_DELAY_MINUTES: DEFAULT_SEND_DELAY_MINUTES,
   DEFAULT_SEND_DATE_JST: DEFAULT_SEND_DATE_JST,
   DEFAULT_SHUFFLE_COUNT: DEFAULT_SHUFFLE_COUNT,
   assertRequiredConfig: assertRequiredConfig,

@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/send-random-messages",
-      "schedule": "0 1 * * *"
+      "schedule": "*/15 * * * *"
     }
   ]
 }
