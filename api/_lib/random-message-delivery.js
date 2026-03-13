@@ -198,15 +198,16 @@ function formatJstDateLabel(date) {
 }
 
 function buildEmailContent(assignment, config) {
-  var sendDate = config.sendDate instanceof Date ? config.sendDate : parseDateOrThrow(config.sendDate, 'sendDate');
-  var sendDateLabel = formatJstDateLabel(sendDate);
+  if (!(config.sendDate instanceof Date)) {
+    parseDateOrThrow(config.sendDate, 'sendDate');
+  }
   var messageText = getPrimaryMessageText(assignment.senderMessages);
   var messageHtml = escapeHtml(messageText).replace(/\r?\n/g, '<br>');
   var subject = '【目醒めレター】あなたへ届いたメッセージ';
   var textBody = [
     assignment.recipientName + ' さんへ',
     '',
-    sendDateLabel + 'の目醒めレターが届いています。',
+    '目醒め人から預かったお手紙をお届けします。',
     '',
     '────────────',
     'あなたに届いたメッセージ',
@@ -214,7 +215,8 @@ function buildEmailContent(assignment, config) {
     '',
     messageText,
     '',
-    'このメールは目醒めレター企画のランダム送信でお届けしています。'
+    'この度はメッセージを送信していただき、ありがとうございました。',
+    'あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。'
   ].join('\n');
 
   var htmlBody = [
@@ -222,12 +224,12 @@ function buildEmailContent(assignment, config) {
     '<div style="max-width:640px;margin:0 auto;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:32px 24px;">',
     '<p style="margin:0 0 12px;font-size:14px;letter-spacing:0.08em;color:#d4a574;">MEZAME LETTER</p>',
     '<h1 style="margin:0 0 16px;font-family:\'Noto Serif JP\',serif;font-size:28px;line-height:1.4;color:#f8f1ea;">あなた宛ての目醒めレターが届いています</h1>',
-    '<p style="margin:0 0 20px;line-height:1.9;color:#ddd4ca;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>' + escapeHtml(sendDateLabel) + 'の目醒めレターをお届けします。</p>',
+    '<p style="margin:0 0 20px;line-height:1.9;color:#ddd4ca;">' + escapeHtml(assignment.recipientName) + ' さんへ。<br>目醒め人から預かったお手紙をお届けします。</p>',
     '<section style="margin:0 0 28px;padding:22px 22px 24px;border-radius:22px;background:linear-gradient(180deg, rgba(240,200,127,0.22), rgba(255,255,255,0.08));border:1px solid rgba(240,200,127,0.42);box-shadow:0 18px 42px rgba(0,0,0,0.26);">'
       + '<p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.14em;color:#f3d8a0;text-transform:uppercase;">Message</p>'
       + '<div style="padding:20px 22px;border-radius:18px;background:#fff7ed;color:#1f140d;font-family:\'Noto Serif JP\',serif;font-size:24px;line-height:2;letter-spacing:0.03em;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);">' + messageHtml + '</div>'
       + '</section>',
-    '<p style="margin:24px 0 0;font-size:13px;line-height:1.8;color:#bfb4aa;">このメールは目醒めレター企画のランダム送信でお届けしています。</p>',
+    '<p style="margin:24px 0 0 0;font-size:13px;line-height:1.9;color:#bfb4aa;">この度はメッセージを送信していただき、ありがとうございました。<br>あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。</p>',
     '</div>',
     '</div>'
   ].join('');

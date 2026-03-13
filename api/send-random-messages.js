@@ -134,11 +134,7 @@ function needsDraftRefresh(assignment) {
     return false;
   }
 
-  if (assignment.status === 'planned') {
-    return true;
-  }
-
-  return !assignment.email_subject || !assignment.email_html || !assignment.email_text;
+  return true;
 }
 
 async function updateAssignmentDraft(config, assignment) {

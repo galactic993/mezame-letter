@@ -219,12 +219,15 @@ test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる'
   });
 
   assert.equal(content.subject, '【目醒めレター】あなたへ届いたメッセージ');
-  assert.match(content.text, /2026年3月13日/);
+  assert.match(content.text, /目醒め人から預かったお手紙をお届けします。/);
   assert.match(content.text, /あなたに届いたメッセージ/);
   assert.match(content.text, /起きて、光を見て。/);
   assert.match(content.html, /Message/);
   assert.match(content.html, /起きて、光を見て。/);
   assert.match(content.html, /font-size:24px/);
+  assert.match(content.text, /この度はメッセージを送信していただき、ありがとうございました。/);
+  assert.match(content.text, /あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。/);
+  assert.match(content.html, /目醒め人から預かったお手紙をお届けします。/);
   assert.doesNotMatch(content.text, /Alice/);
   assert.doesNotMatch(content.html, /Alice/);
   assert.doesNotMatch(content.text, /message\.html/);
@@ -381,6 +384,26 @@ test('send-random-messages は未作成の割り当てを生成して下書き�
           };
         }
 
+        if (/message_delivery_assignments\?id=eq\.11/.test(url) && options.method === 'PATCH') {
+          return {
+            ok: true,
+            status: 204,
+            json: async function () {
+              return [];
+            }
+          };
+        }
+
+        if (/message_delivery_assignments\?id=eq\.12/.test(url) && options.method === 'PATCH') {
+          return {
+            ok: true,
+            status: 204,
+            json: async function () {
+              return [];
+            }
+          };
+        }
+
         if (url === 'https://api.resend.com/emails') {
           throw new Error('Resend should not be called while drafting');
         }
@@ -400,7 +423,7 @@ test('send-random-messages は未作成の割り当てを生成して下書き�
       && entry.options.method === 'POST'
       && /"status":"draft"/.test(entry.options.body)
       && /"email_subject":"【目醒めレター】あなたへ届いたメッセージ"/.test(entry.options.body)
-      && /"email_text":"Bob さんへ\\n\\n2026年3月12日の目醒めレターが届いています。\\n\\n────────────\\nあなたに届いたメッセージ\\n────────────\\n\\nA\\n\\nこのメールは目醒めレター企画のランダム送信でお届けしています。"/.test(entry.options.body)
+      && /"email_text":"Bob さんへ\\n\\n目醒め人から預かったお手紙をお届けします。\\n\\n────────────\\nあなたに届いたメッセージ\\n────────────\\n\\nA\\n\\nこの度はメッセージを送信していただき、ありがとうございました。\\nあなたの大切なメッセージも、目醒め人に大切にお届けいたしました。"/.test(entry.options.body)
       && /font-size:24px/.test(entry.options.body)
       && !/Alice さんから/.test(entry.options.body);
   }));
