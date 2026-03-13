@@ -228,7 +228,7 @@ test('buildEmailContent と buildEmailPayload は本文とURLを組み立てる'
   assert.match(content.html, /font-size:24px/);
   assert.match(content.html, /あなた宛に、目醒め人からのお手紙が届いています/);
   assert.match(content.text, /この度はメッセージを送信していただき、ありがとうございました。/);
-  assert.match(content.text, /あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。/);
+  assert.match(content.text, /あなたのメッセージも、目醒め人に大切にお届けいたしました。/);
   assert.match(content.html, /目醒め人から預かったお手紙をお届けします。/);
   assert.doesNotMatch(content.text, /Alice/);
   assert.doesNotMatch(content.html, /Alice/);
@@ -425,7 +425,7 @@ test('send-random-messages は未作成の割り当てを生成して下書き�
       && entry.options.method === 'POST'
       && /"status":"draft"/.test(entry.options.body)
       && /"email_subject":"【目醒めレター】あなたへ届いたメッセージ"/.test(entry.options.body)
-      && /"email_text":"Bob さんへ\\n\\n目醒め人から預かったお手紙をお届けします。\\n\\n────────────\\nあなたに届いたメッセージ\\n────────────\\n\\nA\\n\\nこの度はメッセージを送信していただき、ありがとうございました。\\nあなたの大切なメッセージも、目醒め人に大切にお届けいたしました。\\n\\n※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。"/.test(entry.options.body)
+      && /"email_text":"Bob さんへ\\n\\n目醒め人から預かったお手紙をお届けします。\\n\\n────────────\\nあなたに届いたメッセージ\\n────────────\\n\\nA\\n\\nこの度はメッセージを送信していただき、ありがとうございました。\\nあなたのメッセージも、目醒め人に大切にお届けいたしました。\\n\\n※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。"/.test(entry.options.body)
       && /font-size:24px/.test(entry.options.body)
       && !/Alice さんから/.test(entry.options.body);
   }));

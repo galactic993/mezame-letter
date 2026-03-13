@@ -233,7 +233,7 @@ function buildEmailContent(assignment, config) {
     messageText,
     '',
     'この度はメッセージを送信していただき、ありがとうございました。',
-    'あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。',
+    'あなたのメッセージも、目醒め人に大切にお届けいたしました。',
     '',
     '※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。'
   ].join('\n');
@@ -248,7 +248,7 @@ function buildEmailContent(assignment, config) {
       + '<p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.14em;color:#f3d8a0;text-transform:uppercase;">Message</p>'
       + '<div style="padding:20px 22px;border-radius:18px;background:#fff7ed;color:#1f140d;font-family:\'Noto Serif JP\',serif;font-size:24px;line-height:2;letter-spacing:0.03em;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);">' + messageHtml + '</div>'
       + '</section>',
-    '<p style="margin:24px 0 0 0;font-size:13px;line-height:1.9;color:#bfb4aa;">この度はメッセージを送信していただき、ありがとうございました。<br>あなたの大切なメッセージも、目醒め人に大切にお届けいたしました。</p>',
+    '<p style="margin:24px 0 0 0;font-size:13px;line-height:1.9;color:#bfb4aa;">この度はメッセージを送信していただき、ありがとうございました。<br>あなたのメッセージも、目醒め人に大切にお届けいたしました。</p>',
     '<p style="margin:16px 0 0 0;font-size:12px;line-height:1.8;color:#9e9389;">※このメールは送信専用です。このアドレスへお問合せを頂いても、ご返信できませんので、予めご了承ください。</p>',
     '</div>',
     '</div>'
